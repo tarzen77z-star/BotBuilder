@@ -658,8 +658,15 @@ function drawTree() {
     ctx.fillStyle='#a0b8d0'; ctx.font='8px JetBrains Mono';
     ctx.fillText((n.props.description||'').substring(0,20),n.x+n.w/2,n.y+29);
     ctx.fillStyle='rgba(100,140,180,.5)'; ctx.font='7.5px JetBrains Mono';
-    const sub=n.props.indicator?n.props.indicator+' '+(n.props.condition||'')+' '+(n.props.threshold||'').trim():n.props.action||n.props.stage_name||'';
-    ctx.fillText(sub.substring(0,22),n.x+n.w/2,n.y+43);
+    var sub;
+    if ((n.type==='entry'||n.type==='condition') && n.props.conditions && n.props.conditions.length>0) {
+      sub = n.props.conditions.map(function(cr){ return cr.ind+' '+cr.cond+(cr.threshold?' '+cr.threshold:''); }).join(' & ');
+    } else if (n.props.indicator) {
+      sub = n.props.indicator+' '+(n.props.condition||'')+' '+(n.props.threshold||'');
+    } else {
+      sub = n.props.action||n.props.stage_name||'';
+    }
+    ctx.fillText(sub.substring(0,24),n.x+n.w/2,n.y+43);
     ctx.textAlign='left';
 
     // Timeline pin
@@ -710,62 +717,154 @@ function delSel() { if(!selNode)return; nodes=nodes.filter(n=>n.id!==selNode.id)
 function clearTree() { if(nodes.length&&!confirm('Clear all nodes and connections?'))return; nodes=[];conns=[];selNode=null;connMode=false;connFrom=null;btTrades=[];updateStats();drawTree(); }
 
 function openEditNode(n) {
-  var t=n.type;
-  document.getElementById('edit-title').textContent='EDIT -- '+NT[t].lbl;
-  document.getElementById('fe-desc').value=n.props.description||'';
+  var t = n.type;
+  document.getElementById('edit-title').textContent = 'EDIT -- ' + NT[t].lbl;
+  document.getElementById('fe-desc').value = n.props.description || '';
 
-  var inds=['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26'];
-  var conds=['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
-  var acts=['BUY_LONG','SELL_LONG','SHORT','COVER_SHORT','SELL_AND_SHORT','COVER_AND_BUY'];
-  var wfOpts=['MA50','MA200','EMA50','MACD_cross','RSI_cross','Original_signal'];
+  var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
+  var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
+  var acts  = ['BUY_LONG','SELL_LONG','SHORT','COVER_SHORT','SELL_AND_SHORT','COVER_AND_BUY'];
+  var wfOpts= ['MA50','MA200','EMA50','MACD_cross','RSI_cross','Original_signal'];
 
-  function makeOpts(arr, selected) {
+  function makeOpts(arr, sel) {
     return arr.map(function(v){
-      return '<option value="'+v+'"'+(v===selected?' selected':'')+'>'+v+'</option>';
+      return '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';
     }).join('');
   }
 
-  var f='';
-  if(t==='entry'||t==='condition'){
-    f='<div class="fg"><label class="fl">Indicator</label>'
-      +'<select class="fs" id="fe-ind">'+makeOpts(inds,n.props.indicator)+'</select></div>'
-      +'<div class="fr">'
-      +'<div class="fg"><label class="fl">Condition</label>'
-      +'<select class="fs" id="fe-cond">'+makeOpts(conds,n.props.condition)+'</select></div>'
-      +'<div class="fg"><label class="fl">Threshold / Value</label>'
-      +'<input class="fi" id="fe-th" value="'+(n.props.threshold||'')+'"></div>'
-      +'</div>';
-  } else if(t==='action'||t==='exit'){
-    f='<div class="fg"><label class="fl">Action</label>'
-      +'<select class="fs" id="fe-act">'+makeOpts(acts,n.props.action)+'</select></div>'
-      +'<div class="fg"><label class="fl">Shares</label>'
-      +'<input class="fi" id="fe-sh" value="'+(n.props.shares||CFG.shares)+'" type="number"></div>';
+  var f = '';
+  if (t === 'entry' || t === 'condition') {
+    // Multi-condition: up to 5 rows
+    // n.props.conditions = [{ind, cond, threshold, logic}, ...]  (NEW structure)
+    // Migrate legacy single-condition props to array
+    if (!n.props.conditions) {
+      n.props.conditions = [{
+        ind: n.props.indicator || 'MACD',
+        cond: n.props.condition || 'cross_up',
+        threshold: n.props.threshold || '',
+        logic: 'AND'
+      }];
+    }
+    var rows = n.props.conditions;
+    // Pad to at least 1, max 5
+    while (rows.length < 1) rows.push({ind:'RSI',cond:'less_than',threshold:'',logic:'AND'});
+
+    f += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+       + '<span style="font-size:10px;color:var(--blu);letter-spacing:1px;font-weight:700">CONDITIONS (ALL must be true)</span>'
+       + '<button onclick="addCondRow()" style="padding:2px 10px;border-radius:4px;border:1px solid var(--grn);color:var(--grn);background:#001a0e;font-size:10px;cursor:pointer;font-family:JetBrains Mono,monospace">+ ADD</button>'
+       + '</div>';
+    f += '<div id="cond-rows">';
+    for (var ci = 0; ci < rows.length; ci++) {
+      f += buildCondRow(rows[ci], ci, rows.length, inds, conds, makeOpts);
+    }
+    f += '</div>';
+    f += '<div style="font-size:9px;color:var(--tx3);margin-top:6px;letter-spacing:.5px">Logic between rows: AND (all conditions must pass)</div>';
+
+  } else if (t === 'action' || t === 'exit') {
+    f = '<div class="fg"><label class="fl">Action</label>'
+      + '<select class="fs" id="fe-act">'+makeOpts(acts,n.props.action)+'</select></div>'
+      + '<div class="fg"><label class="fl">Shares</label>'
+      + '<input class="fi" id="fe-sh" value="'+(n.props.shares||CFG.shares)+'" type="number"></div>';
   } else {
-    f='<div class="fr">'
-      +'<div class="fg"><label class="fl">Stage Name</label>'
-      +'<input class="fi" id="fe-sn" value="'+(n.props.stage_name||'holding')+'"></div>'
-      +'<div class="fg"><label class="fl">Wait For</label>'
-      +'<select class="fs" id="fe-wf">'+makeOpts(wfOpts,n.props.wait_for)+'</select></div>'
-      +'</div>';
+    f = '<div class="fr">'
+      + '<div class="fg"><label class="fl">Stage Name</label>'
+      + '<input class="fi" id="fe-sn" value="'+(n.props.stage_name||'holding')+'"></div>'
+      + '<div class="fg"><label class="fl">Wait For</label>'
+      + '<select class="fs" id="fe-wf">'+makeOpts(wfOpts,n.props.wait_for)+'</select></div>'
+      + '</div>';
   }
-  document.getElementById('edit-fields').innerHTML=f;
-  document.getElementById('edit-save-btn').onclick=function(){saveEdit(n.id);};
+
+  document.getElementById('edit-fields').innerHTML = f;
+  document.getElementById('edit-save-btn').onclick = function(){ saveEdit(n.id); };
   openModal('edit-modal');
 }
 
-function saveEdit(id) {
-  const n=nodes.find(x=>x.id===id); if(!n)return;
-  n.props.description=document.getElementById('fe-desc')?.value||'';
-  const get=(id)=>document.getElementById(id)?.value;
-  if(get('fe-ind'))    n.props.indicator=get('fe-ind');
-  if(get('fe-cond'))   n.props.condition=get('fe-cond');
-  if(get('fe-th')!=null) n.props.threshold=get('fe-th');
-  if(get('fe-act'))    n.props.action=get('fe-act');
-  if(get('fe-sh'))     n.props.shares=get('fe-sh');
-  if(get('fe-sn'))     n.props.stage_name=get('fe-sn');
-  if(get('fe-wf'))     n.props.wait_for=get('fe-wf');
-  closeModal('edit-modal'); drawTree();
+function buildCondRow(row, ci, total, inds, conds, makeOpts) {
+  var indOpts  = inds.map(function(v){ return '<option value="'+v+'"'+(v===row.ind?' selected':'')+'>'+v+'</option>'; }).join('');
+  var condOpts = conds.map(function(v){ return '<option value="'+v+'"'+(v===row.cond?' selected':'')+'>'+v+'</option>'; }).join('');
+  var html = '<div id="crow-'+ci+'" style="display:grid;grid-template-columns:1fr 1fr 70px 30px;gap:5px;margin-bottom:6px;align-items:center">'
+    + '<select class="fs" id="fe-ind-'+ci+'">'+indOpts+'</select>'
+    + '<select class="fs" id="fe-cond-'+ci+'">'+condOpts+'</select>'
+    + '<input class="fi" id="fe-th-'+ci+'" placeholder="value" value="'+(row.threshold||'')+'" style="padding:6px 6px">'
+    + (total > 1
+        ? '<button onclick="removeCondRow('+ci+')" style="padding:0;border-radius:4px;border:1px solid var(--red);color:var(--red);background:#1a0008;font-size:14px;cursor:pointer;width:28px;height:28px;line-height:1">x</button>'
+        : '<span></span>')
+    + '</div>';
+  return html;
 }
+
+function addCondRow() {
+  var rows = collectCondRows();
+  if (rows.length >= 5) { alert('Maximum 5 conditions per node.'); return; }
+  rows.push({ind:'RSI', cond:'less_than', threshold:'', logic:'AND'});
+  var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
+  var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
+  function makeOpts(arr,sel){return arr.map(function(v){return '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';}).join('');}
+  var container = document.getElementById('cond-rows');
+  container.innerHTML = '';
+  for (var ci = 0; ci < rows.length; ci++) {
+    container.innerHTML += buildCondRow(rows[ci], ci, rows.length, inds, conds, makeOpts);
+  }
+}
+
+function removeCondRow(idx) {
+  var rows = collectCondRows();
+  if (rows.length <= 1) return;
+  rows.splice(idx, 1);
+  var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
+  var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
+  function makeOpts(arr,sel){return arr.map(function(v){return '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';}).join('');}
+  var container = document.getElementById('cond-rows');
+  container.innerHTML = '';
+  for (var ci = 0; ci < rows.length; ci++) {
+    container.innerHTML += buildCondRow(rows[ci], ci, rows.length, inds, conds, makeOpts);
+  }
+}
+
+function collectCondRows() {
+  var rows = [];
+  var ci = 0;
+  while (document.getElementById('fe-ind-'+ci)) {
+    rows.push({
+      ind: document.getElementById('fe-ind-'+ci).value,
+      cond: document.getElementById('fe-cond-'+ci).value,
+      threshold: document.getElementById('fe-th-'+ci).value,
+      logic: 'AND'
+    });
+    ci++;
+  }
+  return rows;
+}
+
+
+function saveEdit(id) {
+  var n = nodes.find(function(x){ return x.id===id; });
+  if (!n) return;
+  n.props.description = document.getElementById('fe-desc') ? document.getElementById('fe-desc').value : '';
+  var t = n.type;
+  if (t === 'entry' || t === 'condition') {
+    n.props.conditions = collectCondRows();
+    // Keep legacy single fields in sync for backward compat
+    if (n.props.conditions.length > 0) {
+      n.props.indicator = n.props.conditions[0].ind;
+      n.props.condition = n.props.conditions[0].cond;
+      n.props.threshold = n.props.conditions[0].threshold;
+    }
+  } else if (t === 'action' || t === 'exit') {
+    var act = document.getElementById('fe-act');
+    var sh  = document.getElementById('fe-sh');
+    if (act) n.props.action = act.value;
+    if (sh)  n.props.shares = sh.value;
+  } else {
+    var sn = document.getElementById('fe-sn');
+    var wf = document.getElementById('fe-wf');
+    if (sn) n.props.stage_name = sn.value;
+    if (wf) n.props.wait_for   = wf.value;
+  }
+  closeModal('edit-modal');
+  drawTree();
+}
+
 
 // ── MODAL HELPERS ────────────────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
@@ -866,7 +965,7 @@ function runBacktest() {
 // ── TEMPLATES ────────────────────────────────────────────────
 const TEMPLATES=[
   {name:'NVDA COMBO',col:'#00e887',tags:['MACD','RSI','MA50','MA200','STAGED'],desc:'Multi-stage exits. Armed MACD entry + RSI confirm. Staged MA50/MA200 exits. Long and short.',
-   nodes:[{type:'entry',x:55,y:60,props:{indicator:'MACD',condition:'cross_up',threshold:'0',description:'MACD cross, MACD<0'}},{type:'condition',x:225,y:60,props:{indicator:'RSI',condition:'less_than',threshold:'40',description:'RSI < 40 confirm'}},{type:'condition',x:395,y:60,props:{indicator:'MA50',condition:'above_ma',threshold:'',description:'MA50 above price'}},{type:'action',x:565,y:60,props:{action:'BUY_LONG',shares:'50',description:'Buy 50 shares long'}},{type:'stage',x:225,y:145,props:{stage_name:'holding',wait_for:'MA50',description:'Hold, watch MA50'}},{type:'stage',x:395,y:145,props:{stage_name:'wait_ma200',wait_for:'MA200',description:'MACD>0, go to MA200'}},{type:'exit',x:565,y:145,props:{action:'SELL_AND_SHORT',shares:'50',description:'MACD+RSI+MA full exit'}}],
+   nodes:[{type:'entry',x:55,y:60,props:{description:'EMA12 x EMA26 + RSI<40 + below MAs',conditions:[{ind:'EMA12xEMA26',cond:'cross_up',threshold:'',logic:'AND'},{ind:'RSI',cond:'less_than',threshold:'40',logic:'AND'},{ind:'MA50',cond:'above_ma',threshold:'',logic:'AND'},{ind:'MA200',cond:'above_ma',threshold:'',logic:'AND'}]}},{type:'condition',x:225,y:60,props:{indicator:'RSI',condition:'less_than',threshold:'40',description:'RSI < 40 confirm'}},{type:'condition',x:395,y:60,props:{indicator:'MA50',condition:'above_ma',threshold:'',description:'MA50 above price'}},{type:'action',x:565,y:60,props:{action:'BUY_LONG',shares:'50',description:'Buy 50 shares long'}},{type:'stage',x:225,y:145,props:{stage_name:'holding',wait_for:'MA50',description:'Hold, watch MA50'}},{type:'stage',x:395,y:145,props:{stage_name:'wait_ma200',wait_for:'MA200',description:'MACD>0, go to MA200'}},{type:'exit',x:565,y:145,props:{action:'SELL_AND_SHORT',shares:'50',description:'MACD+RSI+MA full exit'}}],
    conns:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]]},
   {name:'MACD CROSS',col:'#3d9fff',tags:['MACD','SIMPLE','LONG'],desc:'Simple MACD crossover. Buy on bullish cross, sell on bearish cross.',
    nodes:[{type:'entry',x:55,y:80,props:{indicator:'MACD',condition:'cross_up',threshold:'0',description:'MACD bullish crossover'}},{type:'action',x:240,y:80,props:{action:'BUY_LONG',shares:'50',description:'Buy 50 shares'}},{type:'stage',x:420,y:80,props:{stage_name:'holding',wait_for:'MACD_cross',description:'Hold until MACD cross'}},{type:'exit',x:605,y:80,props:{action:'SELL_LONG',shares:'50',description:'MACD bearish cross exit'}}],
@@ -1128,27 +1227,90 @@ function genCode() {
   a('    bearish_cross=e12p and e12p>e26p and e12 and e12<e26');
   a('    log.info(f"{SYMBOL} ${price:.2f} RSI={rsi:.1f} MACD={macd:.4f} Pos={state.position} Stage={state.stage}")');
   a('');
-  a('    if bullish_cross and macd<0 and not state.position:');
-  a('        state.armed_buy=True');
-  a('        state.armed_at=datetime.now(ET).strftime("%H:%M")');
-  a('        log.info(f"ARMED BUY at ${price:.2f}")');
-  a('        tg(f"{SYMBOL}: MACD ARMED BUY - waiting RSI<'+rsiBuy+' + MA50 above price")');
-  a('    elif bearish_cross and macd>0 and not state.position:');
-  a('        state.armed_sell=True');
-  a('        state.armed_at=datetime.now(ET).strftime("%H:%M")');
-  a('        log.info(f"ARMED SELL at ${price:.2f}")');
-  a('        tg(f"{SYMBOL}: MACD ARMED SELL - waiting RSI>'+rsiSell+' + price above MA50")');
-  a('');
-  a('    if not state.position:');
-  if(hasLong){
-    a('        if state.armed_buy and rsi<RSI_BUY and ma50 and ma50>price:');
-    a('            state.armed_buy=False');
-    a('            buy_long(ind,f"Entry: MACD armed {state.armed_at} + RSI<{RSI_BUY} + MA50 above")');
+  // Build entry condition checks from node conditions arrays
+  var entryNodes = nodes.filter(function(n){ return n.type==='entry'; });
+  var condNodes  = nodes.filter(function(n){ return n.type==='condition'; });
+
+  // Collect all conditions from entry + condition nodes
+  function getCondPyLine(row, indent) {
+    var ind = row.ind, cd = row.cond, th = row.threshold||'';
+    var p = indent;
+    if (ind==='EMA12xEMA26' || cd==='cross_up')  return p+'bullish_cross';
+    if (cd==='cross_down')                        return p+'bearish_cross';
+    if (ind==='RSI'  && cd==='less_than')         return p+'rsi is not None and rsi<'+th;
+    if (ind==='RSI'  && cd==='greater_than')      return p+'rsi is not None and rsi>'+th;
+    if (ind==='MACD' && cd==='greater_than')      return p+'macd>'+th;
+    if (ind==='MACD' && cd==='less_than')         return p+'macd<'+th;
+    if (ind==='MACD' && cd==='both_neg')          return p+'e12 is not None and e12<0 and e26 is not None and e26<0';
+    if (ind==='MACD' && cd==='both_pos')          return p+'e12 is not None and e12>0 and e26 is not None and e26>0';
+    if (ind==='MA50' && cd==='above_ma')          return p+'ma50 is not None and ma50>price';
+    if (ind==='MA50' && cd==='below_ma')          return p+'ma50 is not None and ma50<price';
+    if (ind==='MA50' && cd==='at_ma')             return p+'at_ma(price,ma50)';
+    if (ind==='MA200'&& cd==='above_ma')          return p+'ma200 is not None and ma200>price';
+    if (ind==='MA200'&& cd==='below_ma')          return p+'ma200 is not None and ma200<price';
+    if (ind==='MA200'&& cd==='at_ma')             return p+'at_ma(price,ma200)';
+    if (ind==='EMA50'&& cd==='above_ma')          return p+'ema50>price';
+    if (ind==='EMA50'&& cd==='below_ma')          return p+'ema50<price';
+    if (ind==='Price'&& cd==='greater_than')      return p+'price>'+th;
+    if (ind==='Price'&& cd==='less_than')         return p+'price<'+th;
+    return p+'True  # '+ind+' '+cd+' '+th;
   }
-  if(hasShort){
-    a('        if state.armed_sell and rsi>RSI_SELL and ma50 and price>ma50:');
+
+  // Gather buy-side conditions
+  var buyConds = [];
+  entryNodes.forEach(function(n){
+    var cs = n.props.conditions || [{ind:n.props.indicator,cond:n.props.condition,threshold:n.props.threshold}];
+    cs.forEach(function(r){ buyConds.push(r); });
+  });
+  condNodes.forEach(function(n){
+    var cs = n.props.conditions || [{ind:n.props.indicator,cond:n.props.condition,threshold:n.props.threshold}];
+    cs.forEach(function(r){ buyConds.push(r); });
+  });
+
+  // Has MACD cross as arm trigger?
+  var hasMACDArm = buyConds.some(function(r){ return (r.ind==='MACD'||r.ind==='EMA12xEMA26') && (r.cond==='cross_up'||r.cond==='cross_down'); });
+  var nonArmBuyConds = buyConds.filter(function(r){ return !((r.ind==='MACD'||r.ind==='EMA12xEMA26') && (r.cond==='cross_up'||r.cond==='cross_down')); });
+
+  a('    # ── Entry signals ─────────────────────────────────');
+  if (hasMACDArm) {
+    a('    if bullish_cross and macd<0 and not state.position:');
+    a('        state.armed_buy=True');
+    a('        state.armed_at=datetime.now(ET).strftime("%H:%M")');
+    a('        log.info(f"ARMED BUY at ${price:.2f}")');
+    a('    elif bearish_cross and macd>0 and not state.position:');
+    a('        state.armed_sell=True');
+    a('        state.armed_at=datetime.now(ET).strftime("%H:%M")');
+    a('        log.info(f"ARMED SELL at ${price:.2f}")');
+    a('');
+  }
+  a('    if not state.position:');
+  if (hasLong) {
+    if (hasMACDArm && nonArmBuyConds.length > 0) {
+      a('        if state.armed_buy and (');
+      nonArmBuyConds.forEach(function(r,i){
+        var line = getCondPyLine(r,'            ');
+        a(line + (i < nonArmBuyConds.length-1 ? ' and' : ''));
+      });
+      a('        ):');
+    } else if (hasMACDArm) {
+      a('        if state.armed_buy:');
+    } else if (nonArmBuyConds.length > 0) {
+      a('        if (');
+      nonArmBuyConds.forEach(function(r,i){
+        var line = getCondPyLine(r,'            ');
+        a(line + (i < nonArmBuyConds.length-1 ? ' and' : ''));
+      });
+      a('        ):');
+    } else {
+      a('        if True:  # no conditions defined');
+    }
+    a('            state.armed_buy=False');
+    a('            buy_long(ind,"Entry conditions met: '+buyConds.map(function(r){return r.ind+' '+r.cond+(r.threshold?' '+r.threshold:'');}).join(' & ')+'")');
+  }
+  if (hasShort) {
+    a('        if state.armed_sell:');
     a('            state.armed_sell=False');
-    a('            short_shares(ind,f"Entry: MACD armed {state.armed_at} + RSI>{RSI_SELL} + above MA50")');
+    a('            short_shares(ind,"Entry: MACD armed + conditions met")');
   }
   a('        return True');
   a('');
