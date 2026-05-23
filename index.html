@@ -111,7 +111,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 /* ── MODAL ── */
 .modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:1000}
 .modal-ov.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:20px;width:520px;max-width:97vw;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(0,0,0,.6)}
+.modal{background:var(--bg2);border:1px solid var(--bd2);border-radius:12px;padding:24px;width:min(820px,95vw);max-height:92vh;overflow-y:auto;box-shadow:0 0 60px rgba(0,0,0,.8)}
 .modal h3{font-size:12px;color:var(--blu);margin-bottom:16px;letter-spacing:2px;font-weight:700;font-family:'Syne',sans-serif}
 .fg{margin-bottom:10px}
 .fl{font-size:10px;color:var(--tx2);margin-bottom:4px;display:block;letter-spacing:.5px;font-weight:500}
@@ -121,7 +121,20 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .mbtns{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
 
 /* ── CODE OUTPUT MODAL ── */
-.code-modal{width:600px}
+.code-modal{width:min(700px,95vw)}
+.cond-row-wrap{background:var(--bg3);border:1px solid var(--bd);border-radius:7px;padding:10px 12px;margin-bottom:8px;transition:border-color .15s}
+.cond-row-wrap:hover{border-color:var(--bd2)}
+.cond-row-grid{display:grid;grid-template-columns:200px 1fr 90px 36px;gap:8px;align-items:center;margin-bottom:6px}
+.cond-hint{font-size:10px;color:var(--grn);padding:0 2px;letter-spacing:.3px;min-height:14px}
+.cond-row-num{font-size:9px;color:var(--tx3);letter-spacing:1px;margin-bottom:6px;font-weight:700}
+.cond-add-btn{padding:6px 14px;border-radius:5px;border:1px solid var(--grn);color:var(--grn);background:#001a0e;font-size:11px;cursor:pointer;font-family:JetBrains Mono,monospace;font-weight:700;letter-spacing:1px;transition:all .15s}
+.cond-add-btn:hover{background:#002a15;filter:brightness(1.2)}
+.cond-del-btn{width:32px;height:32px;border-radius:5px;border:1px solid var(--red);color:var(--red);background:#1a0008;font-size:18px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cond-del-btn:hover{background:#2a0010}
+.cond-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cond-title{font-size:11px;color:var(--blu);letter-spacing:1.5px;font-weight:700}
+.col-lbl{font-size:9px;color:var(--tx3);letter-spacing:1px;margin-bottom:4px;padding-left:2px;font-weight:700}
+.cond-cols{display:grid;grid-template-columns:200px 1fr 90px 36px;gap:8px;margin-bottom:4px}
 .code-out{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:14px;font-size:10px;line-height:1.7;color:#a8c0d8;overflow-y:auto;max-height:420px;white-space:pre;font-family:'JetBrains Mono',monospace;margin-top:10px;tab-size:4}
 
 /* ── TOOLTIP ── */
@@ -716,6 +729,35 @@ function startConnect() { if(selNode){ connMode=true; connFrom=selNode; drawTree
 function delSel() { if(!selNode)return; nodes=nodes.filter(n=>n.id!==selNode.id); conns=conns.filter(([a,b])=>a!==selNode.id&&b!==selNode.id); selNode=null; updateStats(); drawTree(); }
 function clearTree() { if(nodes.length&&!confirm('Clear all nodes and connections?'))return; nodes=[];conns=[];selNode=null;connMode=false;connFrom=null;btTrades=[];updateStats();drawTree(); }
 
+// ── Condition label maps (global) ───────────────────────────
+var condLabels = {
+  'cross_up':     'EMA12 crosses UP above EMA26',
+  'cross_down':   'EMA12 crosses DOWN below EMA26',
+  'greater_than': 'is GREATER THAN value  (>)',
+  'less_than':    'is LESS THAN value  (<)',
+  'above_ma':     'MA is ABOVE price  →  price is BELOW this MA',
+  'below_ma':     'MA is BELOW price  →  price is ABOVE this MA',
+  'at_ma':        'price is AT / touching this MA  (within 0.2%)',
+  'both_neg':     'both EMA12 & EMA26 below zero  (deep bear zone)',
+  'both_pos':     'both EMA12 & EMA26 above zero  (bull zone)'
+};
+var indLabels = {
+  'MACD':        'MACD line',
+  'RSI':         'RSI (14)',
+  'MA50':        'MA50  (50-bar moving avg)',
+  'MA200':       'MA200  (200-bar moving avg)',
+  'EMA50':       'EMA50  (50-bar exp avg)',
+  'MA20':        'MA20  (20-bar moving avg)',
+  'Price':       'Price  (current bar close)',
+  'EMA12':       'EMA12',
+  'EMA26':       'EMA26',
+  'EMA12xEMA26': 'EMA12 x EMA26  (MACD cross)'
+};
+// Quick lookup: does this condition need a numeric value?
+var condNeedsValue = {'greater_than':1,'less_than':1};
+// Quick lookup: does this indicator use MA-style conditions?
+var indIsMA = {'MA50':1,'MA200':1,'EMA50':1,'MA20':1};
+
 function openEditNode(n) {
   var t = n.type;
   document.getElementById('edit-title').textContent = 'EDIT -- ' + NT[t].lbl;
@@ -723,29 +765,6 @@ function openEditNode(n) {
 
   var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
   var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
-  var condLabels = {
-    'cross_up':     'crosses UP (bullish)',
-    'cross_down':   'crosses DOWN (bearish)',
-    'greater_than': '> (greater than)',
-    'less_than':    '< (less than)',
-    'above_ma':     'is ABOVE price (price below it)',
-    'below_ma':     'is BELOW price (price above it)',
-    'at_ma':        'price touches this MA',
-    'both_neg':     'both lines < 0 (bearish zone)',
-    'both_pos':     'both lines > 0 (bullish zone)'
-  };
-  var indLabels = {
-    'MACD':       'MACD line',
-    'RSI':        'RSI(14)',
-    'MA50':       'MA50',
-    'MA200':      'MA200',
-    'EMA50':      'EMA50',
-    'MA20':       'MA20',
-    'Price':      'Price',
-    'EMA12':      'EMA12',
-    'EMA26':      'EMA26',
-    'EMA12xEMA26':'EMA12 x EMA26 cross'
-  };
   var acts  = ['BUY_LONG','SELL_LONG','SHORT','COVER_SHORT','SELL_AND_SHORT','COVER_AND_BUY'];
   var wfOpts= ['MA50','MA200','EMA50','MACD_cross','RSI_cross','Original_signal'];
 
@@ -772,16 +791,22 @@ function openEditNode(n) {
     // Pad to at least 1, max 5
     while (rows.length < 1) rows.push({ind:'RSI',cond:'less_than',threshold:'',logic:'AND'});
 
-    f += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-       + '<span style="font-size:10px;color:var(--blu);letter-spacing:1px;font-weight:700">CONDITIONS (ALL must be true)</span>'
-       + '<button onclick="addCondRow()" style="padding:2px 10px;border-radius:4px;border:1px solid var(--grn);color:var(--grn);background:#001a0e;font-size:10px;cursor:pointer;font-family:JetBrains Mono,monospace">+ ADD</button>'
+    f += '<div class="cond-header">'
+       + '<span class="cond-title">CONDITIONS — ALL must be true</span>'
+       + '<button class="cond-add-btn" onclick="addCondRow()">+ ADD CONDITION</button>'
+       + '</div>';
+    f += '<div class="cond-cols">'
+       + '<div class="col-lbl">INDICATOR</div>'
+       + '<div class="col-lbl">CONDITION</div>'
+       + '<div class="col-lbl">VALUE</div>'
+       + '<div></div>'
        + '</div>';
     f += '<div id="cond-rows">';
     for (var ci = 0; ci < rows.length; ci++) {
       f += buildCondRow(rows[ci], ci, rows.length, inds, conds, makeOpts);
     }
     f += '</div>';
-    f += '<div style="font-size:9px;color:var(--tx3);margin-top:6px;letter-spacing:.5px">Logic between rows: AND (all conditions must pass)</div>';
+    f += '<div style="font-size:9px;color:var(--tx3);margin-top:4px;padding:4px 6px;background:var(--bg3);border-radius:4px;letter-spacing:.5px">All conditions are checked together with AND logic — every row must pass before the trigger fires.</div>';
 
   } else if (t === 'action' || t === 'exit') {
     f = '<div class="fg"><label class="fl">Action</label>'
@@ -803,78 +828,116 @@ function openEditNode(n) {
 }
 
 function buildCondRow(row, ci, total, inds, conds, makeOpts) {
-  var indOpts  = inds.map(function(v){
-    var lbl = indLabels[v]||v;
-    return '<option value="'+v+'"'+(v===row.ind?' selected':'')+'>'+lbl+'</option>';
-  }).join('');
-  var condOpts = conds.map(function(v){
-    var lbl = condLabels[v]||v;
-    return '<option value="'+v+'"'+(v===row.cond?' selected':'')+'>'+lbl+'</option>';
-  }).join('');
-  // Build plain-English preview of what this condition means
-  var hint = getCondHint(row.ind, row.cond, row.threshold);
-  var html = '<div id="crow-'+ci+'" style="margin-bottom:8px">'
-    + '<div style="display:grid;grid-template-columns:1fr 1fr 70px 30px;gap:5px;align-items:center">'
-    + '<select class="fs" id="fe-ind-'+ci+'" onchange="refreshCondHint('+ci+')" style="font-size:10px">'+indOpts+'</select>'
-    + '<select class="fs" id="fe-cond-'+ci+'" onchange="refreshCondHint('+ci+')" style="font-size:10px">'+condOpts+'</select>'
-    + '<input class="fi" id="fe-th-'+ci+'" placeholder="—" value="'+(row.threshold||'')+'" oninput="refreshCondHint('+ci+')" style="padding:6px 6px;font-size:11px">'
-    + (total > 1
-        ? '<button onclick="removeCondRow('+ci+')" style="padding:0;border-radius:4px;border:1px solid var(--red);color:var(--red);background:#1a0008;font-size:16px;cursor:pointer;width:28px;height:28px;line-height:1">×</button>'
-        : '<span></span>')
+  var selInd  = row.ind  || 'MACD';
+  var selCond = row.cond || 'cross_up';
+  var selTh   = row.threshold || '';
+
+  function mkInd(sel) {
+    return inds.map(function(v){
+      return '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+( indLabels[v]||v)+'</option>';
+    }).join('');
+  }
+  function mkCond(sel) {
+    return conds.map(function(v){
+      return '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+( condLabels[v]||v)+'</option>';
+    }).join('');
+  }
+
+  var needsVal = !!condNeedsValue[selCond];
+  var isMA     = !!indIsMA[selInd];
+  var thPlaceholder = selInd==='RSI' ? 'e.g. 40' : selInd==='Price' ? 'e.g. 875' : needsVal ? 'number' : 'n/a';
+  var thDisabled    = (!needsVal && isMA) ? ' disabled style="opacity:.35;cursor:not-allowed"' : '';
+  var hint = getCondHint(selInd, selCond, selTh);
+
+  var delBtn = total > 1
+    ? '<button class="cond-del-btn" onclick="removeCondRow('+ci+')" title="Remove">×</button>'
+    : '<span></span>';
+
+  return '<div class="cond-row-wrap" id="crow-'+ci+'">'
+    + '<div style="font-size:9px;color:var(--tx3);letter-spacing:1px;margin-bottom:6px;font-weight:700">CONDITION '+(ci+1)+'</div>'
+    + '<div class="cond-row-grid">'
+    +   '<select class="fs" id="fe-ind-'+ci+'" onchange="refreshCondHint('+ci+')" style="font-size:11px">'+mkInd(selInd)+'</select>'
+    +   '<select class="fs" id="fe-cond-'+ci+'" onchange="refreshCondHint('+ci+')" style="font-size:11px">'+mkCond(selCond)+'</select>'
+    +   '<input class="fi" id="fe-th-'+ci+'" placeholder="'+thPlaceholder+'"'
+    +     thDisabled+' value="'+selTh+'" oninput="refreshCondHint('+ci+')" style="font-size:12px">'
+    +   delBtn
     + '</div>'
-    + '<div id="hint-'+ci+'" style="font-size:9px;color:var(--grn);margin-top:3px;padding-left:4px;letter-spacing:.3px">→ '+hint+'</div>'
+    + '<div class="cond-hint" id="hint-'+ci+'">→ '+hint+'</div>'
     + '</div>';
-  return html;
 }
 
+
 function getCondHint(ind, cond, th) {
-  var t = th || '?';
+  var t = th && th.trim() ? th.trim() : '?';
+  // EMA cross
   if (ind==='EMA12xEMA26') {
-    return cond==='cross_up' ? 'EMA12 crosses ABOVE EMA26 (bullish MACD cross)' : 'EMA12 crosses BELOW EMA26 (bearish MACD cross)';
+    return cond==='cross_up'
+      ? 'EMA12 crosses ABOVE EMA26  →  bullish MACD cross signal  (no value needed)'
+      : 'EMA12 crosses BELOW EMA26  →  bearish MACD cross signal  (no value needed)';
   }
+  // RSI
   if (ind==='RSI') {
-    if (cond==='less_than')    return 'RSI(14) < '+t+'  →  oversold / weak (price qualifies if RSI is LOW)';
-    if (cond==='greater_than') return 'RSI(14) > '+t+'  →  overbought / strong (price qualifies if RSI is HIGH)';
+    if (cond==='less_than')    return 'RSI(14) < '+t+'  →  "price is weak / oversold" — good for LONG entries';
+    if (cond==='greater_than') return 'RSI(14) > '+t+'  →  "price is strong / overbought" — good for SHORT entries';
   }
+  // Moving averages
   if (ind==='MA50'||ind==='MA200'||ind==='EMA50'||ind==='MA20') {
-    if (cond==='above_ma') return ind+' is ABOVE price  →  price is BELOW '+ind+' (bearish / entry for longs)';
-    if (cond==='below_ma') return ind+' is BELOW price  →  price is ABOVE '+ind+' (bullish / entry for shorts)';
-    if (cond==='at_ma')    return 'Price is within 0.2% of '+ind+'  →  touching the MA level';
-    if (cond==='cross_up') return 'Price crosses ABOVE '+ind;
-    if (cond==='cross_down')return 'Price crosses BELOW '+ind;
+    if (cond==='above_ma') return ind+' line sits ABOVE current price  →  price is BELOW '+ind+'  (bearish — good for long entries into weakness)  [no value needed]';
+    if (cond==='below_ma') return ind+' line sits BELOW current price  →  price is ABOVE '+ind+'  (bullish — good for short entries into strength)  [no value needed]';
+    if (cond==='at_ma')    return 'Price is within 0.2% of the '+ind+' level  →  price is touching / testing '+ind+'  [no value needed]';
+    if (cond==='cross_up') return 'Price crossed ABOVE '+ind+'  →  bullish breakout  [no value needed]';
+    if (cond==='cross_down')return 'Price crossed BELOW '+ind+'  →  bearish breakdown  [no value needed]';
   }
+  // MACD
   if (ind==='MACD') {
-    if (cond==='greater_than') return 'MACD line > '+t+'  →  bullish momentum';
-    if (cond==='less_than')    return 'MACD line < '+t+'  →  bearish momentum';
-    if (cond==='cross_up')     return 'MACD line crosses above signal line';
-    if (cond==='cross_down')   return 'MACD line crosses below signal line';
-    if (cond==='both_neg')     return 'Both EMA12 & EMA26 < 0  →  deeply bearish zone';
-    if (cond==='both_pos')     return 'Both EMA12 & EMA26 > 0  →  bullish zone';
+    if (cond==='greater_than') return 'MACD line > '+t+'  →  bullish momentum (0 = MACD above zero line)';
+    if (cond==='less_than')    return 'MACD line < '+t+'  →  bearish momentum  (use 0 for "MACD below zero")';
+    if (cond==='cross_up')     return 'MACD line crosses above signal line  →  bullish  [no value needed]';
+    if (cond==='cross_down')   return 'MACD line crosses below signal line  →  bearish  [no value needed]';
+    if (cond==='both_neg')     return 'Both EMA12 & EMA26 below zero  →  deeply bearish zone  [no value needed]';
+    if (cond==='both_pos')     return 'Both EMA12 & EMA26 above zero  →  bullish zone  [no value needed]';
   }
+  // Price
   if (ind==='Price') {
-    if (cond==='greater_than') return 'Price > $'+t;
-    if (cond==='less_than')    return 'Price < $'+t;
+    if (cond==='greater_than') return 'Current price > $'+t+'  →  only trade above this price level';
+    if (cond==='less_than')    return 'Current price < $'+t+'  →  only trade below this price level';
   }
-  if (ind==='EMA12') {
-    if (cond==='greater_than') return 'EMA12 > '+t;
-    if (cond==='less_than')    return 'EMA12 < '+t;
-    if (cond==='cross_up')     return 'EMA12 crosses above EMA26';
+  // EMA12 / EMA26 raw
+  if (ind==='EMA12'||ind==='EMA26') {
+    if (cond==='greater_than') return ind+' > '+t+'  →  EMA in positive territory';
+    if (cond==='less_than')    return ind+' < '+t+'  →  EMA in negative territory';
   }
   return ind+' '+cond+(th?' '+th:'');
 }
 
+
 function refreshCondHint(ci) {
-  var ind  = document.getElementById('fe-ind-'+ci) ? document.getElementById('fe-ind-'+ci).value : '';
-  var cond = document.getElementById('fe-cond-'+ci) ? document.getElementById('fe-cond-'+ci).value : '';
-  var th   = document.getElementById('fe-th-'+ci) ? document.getElementById('fe-th-'+ci).value : '';
+  var indEl  = document.getElementById('fe-ind-'+ci);
+  var condEl = document.getElementById('fe-cond-'+ci);
+  var thEl   = document.getElementById('fe-th-'+ci);
   var hintEl = document.getElementById('hint-'+ci);
+  if (!indEl || !condEl) return;
+  var ind  = indEl.value;
+  var cond = condEl.value;
+  var th   = thEl ? thEl.value : '';
+  // Grey out value field for MA conditions that don't need a number
+  if (thEl) {
+    var needsVal = !!condNeedsValue[cond];
+    var isMA     = !!indIsMA[ind];
+    if (!needsVal && isMA) {
+      thEl.disabled = true; thEl.style.opacity = '0.35'; thEl.placeholder = 'n/a';
+    } else {
+      thEl.disabled = false; thEl.style.opacity = '1';
+      thEl.placeholder = ind==='RSI'?'e.g. 40':ind==='Price'?'e.g. 875':'value';
+    }
+  }
   if (hintEl) hintEl.textContent = '→ ' + getCondHint(ind, cond, th);
 }
 
 function rebuildCondRows(rows) {
   var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
   var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
-  function mo(arr,sel){return arr.map(function(v){return '<option value="'+v+'">'+v+'</option>';}).join('');}
+  function mo(){return '';}
   var container = document.getElementById('cond-rows');
   if (!container) return;
   container.innerHTML = '';
@@ -882,6 +945,7 @@ function rebuildCondRows(rows) {
     container.innerHTML += buildCondRow(rows[ci], ci, rows.length, inds, conds, mo);
   }
 }
+
 
 function addCondRow() {
   var rows = collectCondRows();
