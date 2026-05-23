@@ -111,7 +111,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 /* ── MODAL ── */
 .modal-ov{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:1000}
 .modal-ov.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:20px;width:440px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(0,0,0,.6)}
+.modal{background:var(--bg2);border:1px solid var(--bd2);border-radius:10px;padding:20px;width:520px;max-width:97vw;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(0,0,0,.6)}
 .modal h3{font-size:12px;color:var(--blu);margin-bottom:16px;letter-spacing:2px;font-weight:700;font-family:'Syne',sans-serif}
 .fg{margin-bottom:10px}
 .fl{font-size:10px;color:var(--tx2);margin-bottom:4px;display:block;letter-spacing:.5px;font-weight:500}
@@ -723,6 +723,29 @@ function openEditNode(n) {
 
   var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
   var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
+  var condLabels = {
+    'cross_up':     'crosses UP (bullish)',
+    'cross_down':   'crosses DOWN (bearish)',
+    'greater_than': '> (greater than)',
+    'less_than':    '< (less than)',
+    'above_ma':     'is ABOVE price (price below it)',
+    'below_ma':     'is BELOW price (price above it)',
+    'at_ma':        'price touches this MA',
+    'both_neg':     'both lines < 0 (bearish zone)',
+    'both_pos':     'both lines > 0 (bullish zone)'
+  };
+  var indLabels = {
+    'MACD':       'MACD line',
+    'RSI':        'RSI(14)',
+    'MA50':       'MA50',
+    'MA200':      'MA200',
+    'EMA50':      'EMA50',
+    'MA20':       'MA20',
+    'Price':      'Price',
+    'EMA12':      'EMA12',
+    'EMA26':      'EMA26',
+    'EMA12xEMA26':'EMA12 x EMA26 cross'
+  };
   var acts  = ['BUY_LONG','SELL_LONG','SHORT','COVER_SHORT','SELL_AND_SHORT','COVER_AND_BUY'];
   var wfOpts= ['MA50','MA200','EMA50','MACD_cross','RSI_cross','Original_signal'];
 
@@ -780,46 +803,100 @@ function openEditNode(n) {
 }
 
 function buildCondRow(row, ci, total, inds, conds, makeOpts) {
-  var indOpts  = inds.map(function(v){ return '<option value="'+v+'"'+(v===row.ind?' selected':'')+'>'+v+'</option>'; }).join('');
-  var condOpts = conds.map(function(v){ return '<option value="'+v+'"'+(v===row.cond?' selected':'')+'>'+v+'</option>'; }).join('');
-  var html = '<div id="crow-'+ci+'" style="display:grid;grid-template-columns:1fr 1fr 70px 30px;gap:5px;margin-bottom:6px;align-items:center">'
-    + '<select class="fs" id="fe-ind-'+ci+'">'+indOpts+'</select>'
-    + '<select class="fs" id="fe-cond-'+ci+'">'+condOpts+'</select>'
-    + '<input class="fi" id="fe-th-'+ci+'" placeholder="value" value="'+(row.threshold||'')+'" style="padding:6px 6px">'
+  var indOpts  = inds.map(function(v){
+    var lbl = indLabels[v]||v;
+    return '<option value="'+v+'"'+(v===row.ind?' selected':'')+'>'+lbl+'</option>';
+  }).join('');
+  var condOpts = conds.map(function(v){
+    var lbl = condLabels[v]||v;
+    return '<option value="'+v+'"'+(v===row.cond?' selected':'')+'>'+lbl+'</option>';
+  }).join('');
+  // Build plain-English preview of what this condition means
+  var hint = getCondHint(row.ind, row.cond, row.threshold);
+  var html = '<div id="crow-'+ci+'" style="margin-bottom:8px">'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 70px 30px;gap:5px;align-items:center">'
+    + '<select class="fs" id="fe-ind-'+ci+'" onchange="refreshCondHint('+ci+')" style="font-size:10px">'+indOpts+'</select>'
+    + '<select class="fs" id="fe-cond-'+ci+'" onchange="refreshCondHint('+ci+')" style="font-size:10px">'+condOpts+'</select>'
+    + '<input class="fi" id="fe-th-'+ci+'" placeholder="—" value="'+(row.threshold||'')+'" oninput="refreshCondHint('+ci+')" style="padding:6px 6px;font-size:11px">'
     + (total > 1
-        ? '<button onclick="removeCondRow('+ci+')" style="padding:0;border-radius:4px;border:1px solid var(--red);color:var(--red);background:#1a0008;font-size:14px;cursor:pointer;width:28px;height:28px;line-height:1">x</button>'
+        ? '<button onclick="removeCondRow('+ci+')" style="padding:0;border-radius:4px;border:1px solid var(--red);color:var(--red);background:#1a0008;font-size:16px;cursor:pointer;width:28px;height:28px;line-height:1">×</button>'
         : '<span></span>')
+    + '</div>'
+    + '<div id="hint-'+ci+'" style="font-size:9px;color:var(--grn);margin-top:3px;padding-left:4px;letter-spacing:.3px">→ '+hint+'</div>'
     + '</div>';
   return html;
+}
+
+function getCondHint(ind, cond, th) {
+  var t = th || '?';
+  if (ind==='EMA12xEMA26') {
+    return cond==='cross_up' ? 'EMA12 crosses ABOVE EMA26 (bullish MACD cross)' : 'EMA12 crosses BELOW EMA26 (bearish MACD cross)';
+  }
+  if (ind==='RSI') {
+    if (cond==='less_than')    return 'RSI(14) < '+t+'  →  oversold / weak (price qualifies if RSI is LOW)';
+    if (cond==='greater_than') return 'RSI(14) > '+t+'  →  overbought / strong (price qualifies if RSI is HIGH)';
+  }
+  if (ind==='MA50'||ind==='MA200'||ind==='EMA50'||ind==='MA20') {
+    if (cond==='above_ma') return ind+' is ABOVE price  →  price is BELOW '+ind+' (bearish / entry for longs)';
+    if (cond==='below_ma') return ind+' is BELOW price  →  price is ABOVE '+ind+' (bullish / entry for shorts)';
+    if (cond==='at_ma')    return 'Price is within 0.2% of '+ind+'  →  touching the MA level';
+    if (cond==='cross_up') return 'Price crosses ABOVE '+ind;
+    if (cond==='cross_down')return 'Price crosses BELOW '+ind;
+  }
+  if (ind==='MACD') {
+    if (cond==='greater_than') return 'MACD line > '+t+'  →  bullish momentum';
+    if (cond==='less_than')    return 'MACD line < '+t+'  →  bearish momentum';
+    if (cond==='cross_up')     return 'MACD line crosses above signal line';
+    if (cond==='cross_down')   return 'MACD line crosses below signal line';
+    if (cond==='both_neg')     return 'Both EMA12 & EMA26 < 0  →  deeply bearish zone';
+    if (cond==='both_pos')     return 'Both EMA12 & EMA26 > 0  →  bullish zone';
+  }
+  if (ind==='Price') {
+    if (cond==='greater_than') return 'Price > $'+t;
+    if (cond==='less_than')    return 'Price < $'+t;
+  }
+  if (ind==='EMA12') {
+    if (cond==='greater_than') return 'EMA12 > '+t;
+    if (cond==='less_than')    return 'EMA12 < '+t;
+    if (cond==='cross_up')     return 'EMA12 crosses above EMA26';
+  }
+  return ind+' '+cond+(th?' '+th:'');
+}
+
+function refreshCondHint(ci) {
+  var ind  = document.getElementById('fe-ind-'+ci) ? document.getElementById('fe-ind-'+ci).value : '';
+  var cond = document.getElementById('fe-cond-'+ci) ? document.getElementById('fe-cond-'+ci).value : '';
+  var th   = document.getElementById('fe-th-'+ci) ? document.getElementById('fe-th-'+ci).value : '';
+  var hintEl = document.getElementById('hint-'+ci);
+  if (hintEl) hintEl.textContent = '→ ' + getCondHint(ind, cond, th);
+}
+
+function rebuildCondRows(rows) {
+  var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
+  var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
+  function mo(arr,sel){return arr.map(function(v){return '<option value="'+v+'">'+v+'</option>';}).join('');}
+  var container = document.getElementById('cond-rows');
+  if (!container) return;
+  container.innerHTML = '';
+  for (var ci = 0; ci < rows.length; ci++) {
+    container.innerHTML += buildCondRow(rows[ci], ci, rows.length, inds, conds, mo);
+  }
 }
 
 function addCondRow() {
   var rows = collectCondRows();
   if (rows.length >= 5) { alert('Maximum 5 conditions per node.'); return; }
   rows.push({ind:'RSI', cond:'less_than', threshold:'', logic:'AND'});
-  var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
-  var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
-  function makeOpts(arr,sel){return arr.map(function(v){return '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';}).join('');}
-  var container = document.getElementById('cond-rows');
-  container.innerHTML = '';
-  for (var ci = 0; ci < rows.length; ci++) {
-    container.innerHTML += buildCondRow(rows[ci], ci, rows.length, inds, conds, makeOpts);
-  }
+  rebuildCondRows(rows);
 }
 
 function removeCondRow(idx) {
   var rows = collectCondRows();
   if (rows.length <= 1) return;
   rows.splice(idx, 1);
-  var inds  = ['MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26','EMA12xEMA26'];
-  var conds = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma','both_neg','both_pos'];
-  function makeOpts(arr,sel){return arr.map(function(v){return '<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';}).join('');}
-  var container = document.getElementById('cond-rows');
-  container.innerHTML = '';
-  for (var ci = 0; ci < rows.length; ci++) {
-    container.innerHTML += buildCondRow(rows[ci], ci, rows.length, inds, conds, makeOpts);
-  }
+  rebuildCondRows(rows);
 }
+
 
 function collectCondRows() {
   var rows = [];
