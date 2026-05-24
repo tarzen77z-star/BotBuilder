@@ -63,8 +63,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-
 .chart-wrap{position:relative}
 .ir{border-top:1px solid var(--bd);position:relative}
 .il{position:absolute;left:8px;top:4px;font-size:8px;color:var(--tx3);letter-spacing:1.5px;z-index:2;font-weight:700}
-.tree-sec{border-top:2px solid var(--bd);background:var(--bg2);height:210px;flex-shrink:0;position:relative;overflow:hidden}
-.tree-lbl{position:absolute;left:12px;top:6px;font-size:8px;color:var(--tx3);letter-spacing:1.5px;z-index:10;font-weight:700}
+.tree-sec{border-top:2px solid var(--bd);background:var(--bg2);height:340px;flex-shrink:0;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.tree-lbl{font-size:8px;color:var(--tx3);letter-spacing:1.5px;font-weight:700}
 .conn-hint{position:absolute;bottom:6px;right:10px;font-size:9px;color:var(--tx3);font-weight:500}
 
 /* ── BACKTEST VIEW ── */
@@ -161,9 +161,11 @@ canvas{display:block}
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="logo">BOT<span>BUILD</span>ER</div>
-    <div class="ticker" id="sym-badge">NVDA · 1m · PAPER</div>
+    
     <div class="tabs">
       <button class="tab active" id="tab-chart" onclick="switchTab('chart')">CHART + TREE</button>
+      <button class="tab" id="tab-builder" onclick="switchTab('builder')">⚡ RULE BUILDER</button>
+      <button class="tab" id="tab-english" onclick="switchTab('english')">✦ PLAIN ENGLISH</button>
       <button class="tab" id="tab-bt" onclick="switchTab('bt')">BACKTEST</button>
       <button class="tab" id="tab-tpl" onclick="switchTab('tpl')">TEMPLATES</button>
     </div>
@@ -175,23 +177,25 @@ canvas{display:block}
       <div class="li"><div class="ld" style="background:#ff7b72"></div>RSI</div>
       <div class="li"><div class="ld" style="background:var(--blu)"></div>MACD</div>
     </div>
-    <button class="hdr-btn" onclick="document.getElementById('sym-input').focus();document.getElementById('sym-modal').classList.add('open')">⚙ CONFIG</button>
+    <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+      <input id="ticker-input" class="fi" placeholder="NVDA" value="NVDA"
+        style="width:80px;height:30px;padding:4px 8px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase"
+        onkeydown="if(event.key==='Enter')loadDataFromInputs()"
+        oninput="this.value=this.value.toUpperCase()">
+      <input id="date-input" type="date" class="fi"
+        style="width:140px;height:30px;padding:4px 8px;font-size:11px"
+        value="">
+      <button id="load-data-btn" class="btn btn-g" onclick="loadDataFromInputs()" style="height:30px;padding:0 12px;font-size:10px;white-space:nowrap">LOAD DATA</button>
+      <button class="btn btn-b" onclick="openCSVModal()" style="height:30px;padding:0 12px;font-size:10px;white-space:nowrap" title="Paste CSV from Yahoo Finance download">↑ CSV</button>
+      <button class="hdr-btn" onclick="document.getElementById('sym-modal').classList.add('open')">⚙ BOT CONFIG</button>
+    </div>
   </div>
 
   <!-- MAIN -->
   <div class="main">
     <!-- LEFT PANEL -->
     <div class="lpanel">
-      <div class="psec">
-        <div class="plbl">Add Node</div>
-        <div class="npal">
-          <div class="pn pn-e" onclick="addNodeUI('entry')">⚡ ENTRY TRIGGER</div>
-          <div class="pn pn-c" onclick="addNodeUI('condition')">◈ IF CONDITION</div>
-          <div class="pn pn-a" onclick="addNodeUI('action')">▶ ORDER ACTION</div>
-          <div class="pn pn-s" onclick="addNodeUI('stage')">◉ WAIT STAGE</div>
-          <div class="pn pn-x" onclick="addNodeUI('exit')">✕ EXIT / COVER</div>
-        </div>
-      </div>
+      
       <div class="psec">
         <div class="plbl">Live Bar</div>
         <div class="srow"><span class="sk">Price</span><span class="sv" id="li-price">—</span></div>
@@ -237,10 +241,107 @@ canvas{display:block}
             <canvas id="mC"></canvas>
           </div>
         </div>
-        <div class="tree-sec">
-          <div class="tree-lbl">DECISION TREE · drag to move · dbl-click to edit · right-click to connect · timeline aligns with chart above</div>
-          <div class="conn-hint" id="conn-hint" style="display:none;color:var(--blu)">RIGHT-CLICK target node to connect →</div>
-          <canvas id="tC"></canvas>
+        <div id="tree-resize-handle" style="height:6px;background:var(--bd);cursor:ns-resize;flex-shrink:0;position:relative;z-index:10;transition:background .15s"
+  onmouseenter="this.style.background='var(--blu)'" onmouseleave="this.style.background='var(--bd)'"
+  title="Drag to resize tree panel"></div>
+<div class="tree-sec" id="tree-sec">
+          <div style="display:flex;align-items:center;gap:0;padding:5px 8px 4px 8px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-shrink:0;flex-wrap:wrap;gap:5px">
+            <span style="font-size:9px;color:var(--tx3);letter-spacing:1.5px;font-weight:700;margin-right:4px">ADD:</span>
+            <div class="pn pn-e" onclick="addNodeUI('entry')" style="padding:3px 10px;font-size:10px">⚡ ENTRY</div>
+            <div class="pn pn-c" onclick="addNodeUI('condition')" style="padding:3px 10px;font-size:10px">◈ CONDITION</div>
+            <div class="pn pn-a" onclick="addNodeUI('action')" style="padding:3px 10px;font-size:10px">▶ ACTION</div>
+            <div class="pn pn-s" onclick="addNodeUI('stage')" style="padding:3px 10px;font-size:10px">◉ STAGE</div>
+            <div class="pn pn-x" onclick="addNodeUI('exit')" style="padding:3px 10px;font-size:10px">✕ EXIT</div>
+            <span style="flex:1"></span>
+            <span style="font-size:8px;color:var(--tx3);letter-spacing:.5px">drag=move · dbl-click=edit · right-click node=connect · right-click ✕=disconnect</span>
+          </div>
+          <div id="conn-hint" style="display:none;position:absolute;bottom:8px;right:12px;font-size:10px;color:var(--blu);font-weight:700;background:rgba(13,17,23,.85);padding:4px 10px;border-radius:4px;border:1px solid var(--blu);z-index:20;pointer-events:none">RIGHT-CLICK target node to connect →</div>
+          <div style="flex:1;overflow:hidden;position:relative"><canvas id="tC"></canvas></div>
+        </div>
+      </div>
+
+      <!-- RULE BUILDER VIEW (Option 2 + 5 hybrid) -->
+      <div id="view-builder" style="display:none;flex-direction:column;height:100%;overflow:hidden">
+        <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+          <!-- Left: Rule table editor -->
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--bd)">
+            <div style="padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;flex-shrink:0">
+              <span style="font-size:11px;font-weight:700;color:var(--blu);letter-spacing:2px">RULE BUILDER</span>
+              <span style="font-size:10px;color:var(--tx3)">Each row = one condition or action</span>
+              <button class="btn btn-g" onclick="rbAddRow('entry')" style="margin-left:auto;padding:4px 10px;font-size:10px">+ ENTRY</button>
+              <button class="btn btn-b" onclick="rbAddRow('condition')" style="padding:4px 10px;font-size:10px">+ CONDITION</button>
+              <button class="btn btn-a" onclick="rbAddRow('action')" style="padding:4px 10px;font-size:10px;border-color:var(--red);color:var(--red);background:#1a0008">+ ACTION</button>
+              <button class="btn btn-y" onclick="rbAddRow('stage')" style="padding:4px 10px;font-size:10px">+ STAGE</button>
+              <button class="btn btn-p" onclick="rbAddRow('exit')" style="padding:4px 10px;font-size:10px">+ EXIT</button>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:10px">
+              <table id="rb-table" style="width:100%;border-collapse:collapse;font-size:11px">
+                <thead>
+                  <tr style="background:var(--bg3);color:var(--tx3);font-size:9px;letter-spacing:1px">
+                    <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd);width:80px">TYPE</th>
+                    <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd)">INDICATOR</th>
+                    <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd)">CONDITION</th>
+                    <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd);width:80px">VALUE</th>
+                    <th style="padding:6px 8px;text-align:left;border-bottom:1px solid var(--bd)">PLAIN ENGLISH MEANING</th>
+                    <th style="padding:6px 8px;border-bottom:1px solid var(--bd);width:32px"></th>
+                  </tr>
+                </thead>
+                <tbody id="rb-tbody"></tbody>
+              </table>
+              <div id="rb-empty" style="text-align:center;padding:40px;color:var(--tx3);font-size:11px">
+                Click + ENTRY above to start building your strategy
+              </div>
+            </div>
+          </div>
+          <!-- Right: Auto-generated canvas diagram -->
+          <div style="width:320px;min-width:280px;display:flex;flex-direction:column;background:var(--bg2);flex-shrink:0">
+            <div style="padding:8px 12px;border-bottom:1px solid var(--bd);font-size:9px;color:var(--tx3);letter-spacing:1.5px;font-weight:700">AUTO DIAGRAM (read-only)</div>
+            <canvas id="rbC" style="flex:1;width:100%" height="500"></canvas>
+          </div>
+        </div>
+        <div style="padding:8px 14px;background:var(--bg2);border-top:1px solid var(--bd);display:flex;gap:8px;align-items:center;flex-shrink:0">
+          <button class="btn btn-y" onclick="rbClearAll()" style="font-size:10px">↺ CLEAR</button>
+          <button class="btn btn-b" onclick="rbSyncToTree()" style="font-size:10px">→ SYNC TO CANVAS</button>
+          <button class="btn btn-o" onclick="runBacktest()" style="font-size:10px">▶ BACKTEST</button>
+          <button class="btn btn-p" onclick="genCode()" style="font-size:10px">{ } EXPORT .PY</button>
+        </div>
+      </div>
+
+      <!-- PLAIN ENGLISH VIEW (Option 3) -->
+      <div id="view-english" style="display:none;flex-direction:column;height:100%;overflow-y:auto;padding:20px;gap:16px">
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:16px">
+          <div style="font-size:10px;color:var(--blu);letter-spacing:2px;font-weight:700;margin-bottom:12px">ENTRY — when ALL of these are true, open position</div>
+          <div id="pe-entry-rows"></div>
+          <button class="btn btn-g" onclick="peAddRow('entry')" style="margin-top:8px;font-size:10px;padding:4px 12px">+ ADD CONDITION</button>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:16px">
+          <div style="font-size:10px;color:var(--red);letter-spacing:2px;font-weight:700;margin-bottom:12px">EXIT — when ANY of these trigger, close position</div>
+          <div id="pe-exit-rows"></div>
+          <button class="btn btn-r" onclick="peAddRow('exit')" style="margin-top:8px;font-size:10px;padding:4px 12px">+ ADD EXIT CONDITION</button>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:16px">
+          <div style="font-size:10px;color:var(--ylw);letter-spacing:2px;font-weight:700;margin-bottom:12px">POSITION SETTINGS</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--tx2)">
+            <span>Trade</span>
+            <select class="fs" id="pe-side" style="width:120px;font-size:11px">
+              <option value="long">LONG only</option>
+              <option value="short">SHORT only</option>
+              <option value="both">LONG + SHORT</option>
+            </select>
+            <span>with</span>
+            <input class="fi" id="pe-shares" value="50" type="number" style="width:60px;font-size:11px">
+            <span>shares on</span>
+            <input class="fi" id="pe-sym" value="NVDA" style="width:70px;font-size:11px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:14px">
+          <div style="font-size:10px;color:var(--grn);letter-spacing:2px;font-weight:700;margin-bottom:10px">STRATEGY PREVIEW</div>
+          <div id="pe-preview" style="font-size:11px;color:var(--tx2);line-height:2;font-family:JetBrains Mono,monospace"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-o" onclick="runBacktest()" style="font-size:10px">▶ BACKTEST</button>
+          <button class="btn btn-p" onclick="genCodeFromPE()" style="font-size:10px">{ } EXPORT .PY</button>
+          <button class="btn btn-b" onclick="peSyncToTree()" style="font-size:10px">→ SYNC TO CANVAS</button>
         </div>
       </div>
 
@@ -294,7 +395,7 @@ canvas{display:block}
     <div style="width:1px;height:20px;background:var(--bd);margin:0 4px"></div>
     <button class="btn btn-t" onclick="saveTree()">↓ SAVE JSON</button>
     <button class="btn btn-t" onclick="loadTree()">↑ LOAD JSON</button>
-    <span class="hint">dbl-click = edit · right-click = connect · scroll = zoom · drag = move</span>
+    <span class="hint">dbl-click = edit · right-click node = connect · right-click ✕ on arrow = disconnect · scroll = zoom</span>
   </div>
 
   <!-- STATUS BAR -->
@@ -318,6 +419,32 @@ canvas{display:block}
     <div class="mbtns">
       <button class="btn btn-r" onclick="closeModal('edit-modal')">CANCEL</button>
       <button class="btn btn-g" id="edit-save-btn">SAVE NODE</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-ov" id="csv-modal">
+  <div class="modal" style="width:min(680px,95vw)">
+    <h3>IMPORT CSV FROM YAHOO FINANCE</h3>
+    <div style="font-size:10px;color:var(--tx2);margin-bottom:12px;line-height:1.7">
+      1. Go to <span style="color:var(--ylw)">finance.yahoo.com</span> → search your ticker → Historical Data<br>
+      2. Set frequency to <span style="color:var(--grn)">1-minute</span> (or any interval) and download CSV<br>
+      3. Paste the CSV content below — or drag &amp; drop the file onto this box
+    </div>
+    <div class="fg">
+      <label class="fl">TICKER SYMBOL</label>
+      <input class="fi" id="csv-ticker" value="NVDA" style="width:120px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="fg">
+      <label class="fl">CSV DATA — paste here or drop file</label>
+      <textarea id="csv-paste" class="fi" rows="10"
+        style="font-size:10px;line-height:1.5;resize:vertical;font-family:JetBrains Mono,monospace"
+        placeholder="Datetime,Open,High,Low,Close,Adj Close,Volume&#10;2024-05-23 09:30:00,875.32,876.41,874.21,875.89,875.89,123456&#10;..."></textarea>
+    </div>
+    <div id="csv-status" style="font-size:10px;min-height:18px;margin-top:4px"></div>
+    <div class="mbtns">
+      <button class="btn btn-r" onclick="closeModal('csv-modal')">CANCEL</button>
+      <button class="btn btn-g" onclick="importCSV()">IMPORT</button>
     </div>
   </div>
 </div>
@@ -366,43 +493,196 @@ function applyConfig() {
   CFG.interval= parseInt(document.getElementById('cfg-interval').value) || 60;
   CFG.open    = document.getElementById('cfg-open').value || '9:30';
   CFG.close   = document.getElementById('cfg-close').value || '15:55';
-  document.getElementById('sym-badge').textContent = `${CFG.symbol} · 1m · PAPER`;
+  document.getElementById('ticker-input').value = CFG.symbol;
   closeModal('sym-modal');
 }
 
 // ── DATA GENERATION ──────────────────────────────────────────
-const OHLCV = (() => {
-  const d = []; let p = 875;
-  const s = new Date(2024,2,15,9,30,0);
-  for (let i = 0; i < 390; i++) {
-    const t = new Date(s.getTime() + i * 60000);
-    const hr = t.getHours(), mn = t.getMinutes();
-    const trend = Math.sin(i/80)*14 + Math.sin(i/25)*6 + Math.sin(i/200)*25 + Math.cos(i/45)*4;
-    const noise = (Math.random()-.5)*2.8;
-    const o = p, c = o + noise + trend*.065;
-    const h = Math.max(o,c) + Math.abs((Math.random()-.5)*2) + .4;
-    const l = Math.min(o,c) - Math.abs((Math.random()-.5)*2) - .4;
-    d.push({ t:(String(hr).padStart(2,'0')+':'+String(mn).padStart(2,'0')), o:+o.toFixed(2), h:+h.toFixed(2), l:+l.toFixed(2), c:+c.toFixed(2) });
-    p = c;
-  }
-  return d;
-})();
+// ── Chart data (loaded from Yahoo Finance or simulated) ──────
+let OHLCV = [];
+let CLS=[], MA20=[], MA50=[], MA200=[], EMA50=[], EMA12=[], EMA26=[];
+let MACDL=[], MACDS=[], MACDH=[], RSI=[];
 
-const CLS = OHLCV.map(d=>d.c);
 const sma = (a,n) => a.map((_,i) => i<n-1?null : a.slice(i-n+1,i+1).reduce((x,y)=>x+y,0)/n);
 const ema = (a,n) => { const k=2/(n+1),o=[]; a.forEach((v,i)=>{ if(i<n-1) o.push(null); else if(i===n-1) o.push(a.slice(0,n).reduce((x,y)=>x+y,0)/n); else o.push(v*k+o[i-1]*(1-k)); }); return o; };
-const rsi14 = a => { const o=new Array(a.length).fill(null); for(let i=14;i<a.length;i++){let g=0,l=0;for(let j=i-13;j<=i;j++){const dd=a[j]-a[j-1];if(dd>0)g+=dd;else l-=dd;}g/=14;l/=14;o[i]=l===0?100:100-(100/(1+g/l));}return o; };
+const rsi14fn = a => { const o=new Array(a.length).fill(null); for(let i=14;i<a.length;i++){let g=0,l=0;for(let j=i-13;j<=i;j++){const dd=a[j]-a[j-1];if(dd>0)g+=dd;else l-=dd;}g/=14;l/=14;o[i]=l===0?100:100-(100/(1+g/l));}return o; };
 
-const MA20=sma(CLS,20), MA50=sma(CLS,50), MA200=sma(CLS,200);
-const EMA50=ema(CLS,50), EMA12=ema(CLS,12), EMA26=ema(CLS,26);
-const MACDL=EMA12.map((v,i)=>v==null||EMA26[i]==null?null:v-EMA26[i]);
-const MACDS=(() => {
-  const vals=MACDL.filter(v=>v!=null), ev=ema(vals,9);
-  const o=new Array(MACDL.length).fill(null); let vi=0;
-  MACDL.forEach((v,i)=>{ if(v!=null) o[i]=ev[vi++]; }); return o;
-})();
-const MACDH=MACDL.map((v,i)=>v==null||MACDS[i]==null?null:v-MACDS[i]);
-const RSI=rsi14(CLS);
+function calcAllIndicators() {
+  CLS   = OHLCV.map(d=>d.c);
+  MA20  = sma(CLS,20); MA50=sma(CLS,50); MA200=sma(CLS,200);
+  EMA50 = ema(CLS,50); EMA12=ema(CLS,12); EMA26=ema(CLS,26);
+  MACDL = EMA12.map((v,i)=>v==null||EMA26[i]==null?null:v-EMA26[i]);
+  MACDS = (()=>{ const vals=MACDL.filter(v=>v!=null),ev=ema(vals,9); const o=new Array(MACDL.length).fill(null);let vi=0; MACDL.forEach((v,i)=>{if(v!=null)o[i]=ev[vi++];}); return o; })();
+  MACDH = MACDL.map((v,i)=>v==null||MACDS[i]==null?null:v-MACDS[i]);
+  RSI   = rsi14fn(CLS);
+}
+
+function generateSimData() {
+  const d=[]; let p=875;
+  const s=new Date(2024,2,15,9,30,0);
+  for(let i=0;i<390;i++){
+    const t=new Date(s.getTime()+i*60000);
+    const hr=t.getHours(),mn=t.getMinutes();
+    const trend=Math.sin(i/80)*14+Math.sin(i/25)*6+Math.sin(i/200)*25+Math.cos(i/45)*4;
+    const noise=(Math.random()-.5)*2.8;
+    const o=p,cv=o+noise+trend*.065;
+    const h=Math.max(o,cv)+Math.abs((Math.random()-.5)*2)+.4;
+    const l=Math.min(o,cv)-Math.abs((Math.random()-.5)*2)-.4;
+    d.push({t:(String(hr).padStart(2,'0')+':'+String(mn).padStart(2,'0')),o:+o.toFixed(2),h:+h.toFixed(2),l:+l.toFixed(2),c:+cv.toFixed(2)});
+    p=cv;
+  }
+  return d;
+}
+
+// ── Yahoo Finance data loader ─────────────────────────────────
+function loadDataFromInputs() {
+  var ticker = (document.getElementById('ticker-input').value||'NVDA').trim().toUpperCase();
+  var dateVal = document.getElementById('date-input').value; // YYYY-MM-DD or ''
+  if (!dateVal) {
+    // Default to most recent weekday
+    var d = new Date();
+    // If weekend, go back to Friday
+    if (d.getDay()===0) d.setDate(d.getDate()-2);
+    if (d.getDay()===6) d.setDate(d.getDate()-1);
+    dateVal = d.toISOString().slice(0,10);
+    document.getElementById('date-input').value = dateVal;
+  }
+  fetchYahooData(ticker, dateVal);
+}
+
+async function fetchYahooData(ticker, dateStr) {
+  setLoadingState(true, 'Fetching '+ticker+'...');
+  try {
+    let targetDate;
+    if (dateStr && dateStr.trim()) {
+      targetDate = new Date(dateStr + 'T12:00:00');
+    } else {
+      targetDate = new Date();
+    }
+    const dayStart = new Date(targetDate); dayStart.setHours(0,0,0,0);
+    const dayEnd   = new Date(targetDate); dayEnd.setHours(23,59,59,0);
+    const t1 = Math.floor(dayStart.getTime()/1000);
+    const t2 = Math.floor(dayEnd.getTime()/1000);
+
+    const sym = ticker.toUpperCase();
+    const yahooUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/'
+      +sym+'?interval=1m&period1='+t1+'&period2='+t2+'&includePrePost=false';
+
+    // Try multiple CORS proxies in order
+    const proxies = [
+      'https://api.allorigins.win/raw?url=',
+      'https://corsproxy.io/?',
+      'https://api.codetabs.com/v1/proxy?quest=',
+    ];
+
+    let json = null;
+    let lastErr = '';
+    for (let pi=0; pi<proxies.length; pi++) {
+      setLoadingState(true, 'Trying proxy '+(pi+1)+'/'+proxies.length+'...');
+      try {
+        const proxyUrl = proxies[pi] + encodeURIComponent(yahooUrl);
+        const resp = await Promise.race([
+          fetch(proxyUrl),
+          new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))
+        ]);
+        if (!resp.ok) { lastErr='HTTP '+resp.status; continue; }
+        const text = await resp.text();
+        json = JSON.parse(text);
+        if (json && json.chart && json.chart.result) break; // success
+        lastErr = 'Bad response from proxy '+(pi+1);
+        json = null;
+      } catch(e) {
+        lastErr = e.message;
+        json = null;
+      }
+    }
+
+    if (!json) throw new Error('All proxies failed. Last error: '+lastErr+'. Try again in a moment.');
+
+    const result = json.chart && json.chart.result && json.chart.result[0];
+    if (!result) {
+      const errMsg = json.chart && json.chart.error && json.chart.error.description;
+      throw new Error(errMsg || 'No data — check ticker symbol or try a different date.');
+    }
+
+    const timestamps = result.timestamp;
+    const q = result.indicators.quote[0];
+    if (!timestamps || !timestamps.length) throw new Error('No bars for this date. Markets may have been closed.');
+
+    // Detect timezone offset from meta
+    const meta = result.meta || {};
+    const gmtOffset = meta.gmtoffset || meta.gmtOffset || -14400; // default ET=-4h
+
+    const bars = [];
+    for (let i=0; i<timestamps.length; i++) {
+      if (q.close[i]==null || q.open[i]==null) continue;
+      // Convert UTC timestamp to market-local time using gmtOffset
+      const localMs = (timestamps[i] + gmtOffset) * 1000;
+      const ld = new Date(localMs);
+      const hr = ld.getUTCHours(), mn = ld.getUTCMinutes();
+      // Filter to regular session 9:30-16:00
+      if (hr < 9 || (hr===9&&mn<30) || hr >= 16) continue;
+      bars.push({
+        t: String(hr).padStart(2,'0')+':'+String(mn).padStart(2,'0'),
+        o: +q.open[i].toFixed(2),
+        h: +q.high[i].toFixed(2),
+        l: +q.low[i].toFixed(2),
+        c: +q.close[i].toFixed(2)
+      });
+    }
+
+    if (bars.length < 5) throw new Error('Only '+bars.length+' bars found. Try a recent weekday when markets were open.');
+
+    OHLCV = bars;
+    calcAllIndicators();
+    viewStart = 0;
+    viewLen   = Math.min(120, OHLCV.length);
+    CFG.symbol = sym;
+    document.getElementById('ticker-input').value = sym;
+    if (document.getElementById('sym-input')) document.getElementById('sym-input').value = sym;
+    setLoadingState(false);
+    drawAll();
+    updateInds(Math.min(100, OHLCV.length-1));
+    showToast(sym+': '+bars.length+' bars loaded  ✓', 'var(--grn)');
+
+  } catch(err) {
+    setLoadingState(false);
+    showToast('Load failed: '+err.message, 'var(--red)');
+    console.error('Yahoo fetch error:', err);
+    // Fall back to sim data if nothing loaded yet
+    if (OHLCV.length < 5) {
+      OHLCV = generateSimData();
+      calcAllIndicators();
+      drawAll();
+      showToast('Showing simulated data (real fetch failed)', 'var(--ylw)');
+    }
+  }
+}
+
+
+function setLoadingState(loading, msg) {
+  const btn = document.getElementById('load-data-btn');
+  if (loading) {
+    if (btn) { btn.disabled=true; btn.textContent=msg||'Loading...'; }
+  } else {
+    if (btn) { btn.disabled=false; btn.textContent='LOAD DATA'; }
+  }
+}
+
+function showToast(msg, color) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--bd2);border-radius:6px;padding:10px 20px;font-size:11px;font-family:JetBrains Mono,monospace;z-index:999;pointer-events:none;transition:opacity .3s;letter-spacing:.5px';
+    (document.getElementById('app')||document.body).appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.color = color || 'var(--tx)';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.opacity='0'; }, 4000);
+}
 
 // ── CHART STATE ──────────────────────────────────────────────
 let cW=800, cH_candle=260, cH_ind=75;
@@ -417,15 +697,20 @@ function getChartWidth() {
 function resizeCharts() {
   cW = getChartWidth();
   const ca = document.getElementById('chart-area');
-  const treeH = 210;
-  const avail = ca.offsetHeight - treeH - 2;
-  cH_candle = Math.max(180, Math.floor(avail * 0.56));
-  cH_ind = Math.max(60, Math.floor(avail * 0.22));
+  const treeSec = document.getElementById('tree-sec');
+  const treeH = treeSec ? treeSec.offsetHeight : 340;
+  const handleH = 6;
+  const avail = ca.offsetHeight - treeH - handleH - 2;
+  cH_candle = Math.max(160, Math.floor(avail * 0.58));
+  cH_ind = Math.max(55, Math.floor(avail * 0.21));
 
   const cC=document.getElementById('cC'); cC.width=cW; cC.height=cH_candle;
   const rC=document.getElementById('rC'); rC.width=cW; rC.height=cH_ind;
   const mC=document.getElementById('mC'); mC.width=cW; mC.height=cH_ind;
-  const tC=document.getElementById('tC'); tC.width=Math.max(cW,900); tC.height=200;
+  const tC=document.getElementById('tC');
+  const treeSec2=document.getElementById('tree-sec');
+  const treeSecH=treeSec2?Math.max(80, treeSec2.offsetHeight-42):300;
+  tC.width=Math.max(cW,1400); tC.height=treeSecH;
   drawAll();
 }
 
@@ -619,10 +904,43 @@ function updateStats() {
   document.getElementById('sb-selected').textContent=selNode?'SELECTED: '+selNode.type.toUpperCase()+' · '+(selNode.props.description||'').substring(0,30):'';
 }
 
+// ── Arrow hit detection ──────────────────────────────────────
+function sampleBezier(t, ax,ay,cpx1,cpy1,cpx2,cpy2,bx,by) {
+  // Cubic bezier: we use quadratic-style (mx,ay) and (mx,by) as both control points
+  var u=1-t;
+  return {
+    x: u*u*u*ax + 3*u*u*t*cpx1 + 3*u*t*t*cpx2 + t*t*t*bx,
+    y: u*u*u*ay + 3*u*u*t*cpy1 + 3*u*t*t*cpy2 + t*t*t*by
+  };
+}
+
+function findConnAtPoint(mx, my) {
+  // Returns index in conns[] of the arrow closest to mx,my within 12px, or -1
+  var THRESH = 12;
+  var bestIdx = -1, bestDist = THRESH;
+  for (var ci = 0; ci < conns.length; ci++) {
+    var a = conns[ci][0], b = conns[ci][1];
+    var na = nodes.find(function(n){ return n.id===a; });
+    var nb = nodes.find(function(n){ return n.id===b; });
+    if (!na||!nb) continue;
+    var ax=na.x+na.w, ay=na.y+na.h/2, bx=nb.x, by=nb.y+nb.h/2, cmx=(ax+bx)/2;
+    // Sample 20 points along the bezier curve
+    for (var ti=0; ti<=20; ti++) {
+      var pt = sampleBezier(ti/20, ax,ay, cmx,ay, cmx,by, bx,by);
+      var d  = Math.sqrt((pt.x-mx)*(pt.x-mx)+(pt.y-my)*(pt.y-my));
+      if (d < bestDist) { bestDist=d; bestIdx=ci; }
+    }
+  }
+  return bestIdx;
+}
+
 function drawTree() {
   const cv=document.getElementById('tC'), ctx=cv.getContext('2d');
   const W=cv.width, H=cv.height;
   ctx.clearRect(0,0,W,H); ctx.fillStyle='#0e1318'; ctx.fillRect(0,0,W,H);
+  // Apply pan
+  ctx.save();
+  ctx.translate(Math.min(0,treePanX),0);
 
   const tw=(W-50)/390;
   ctx.strokeStyle='rgba(26,34,48,.7)'; ctx.lineWidth=.8;
@@ -646,6 +964,13 @@ function drawTree() {
     ctx.fillStyle=NT[nb.type].col+'aa'; ctx.beginPath();
     ctx.moveTo(bx,by); ctx.lineTo(bx-8*Math.cos(ang-.4),by-8*Math.sin(ang-.4)); ctx.lineTo(bx-8*Math.cos(ang+.4),by-8*Math.sin(ang+.4));
     ctx.closePath(); ctx.fill();
+    // Draw ✕ at midpoint so user knows right-click deletes
+    var midPt = sampleBezier(0.5, ax,ay, (ax+bx)/2,ay, (ax+bx)/2,by, bx,by);
+    ctx.fillStyle='rgba(20,28,40,.85)';
+    ctx.beginPath(); ctx.arc(midPt.x,midPt.y,8,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=NT[na.type].col+'90'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(midPt.x,midPt.y,8,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='#ff4757'; ctx.font='bold 10px JetBrains Mono'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('×',midPt.x,midPt.y); ctx.textAlign='left'; ctx.textBaseline='alphabetic';
   });
 
   // Nodes
@@ -687,6 +1012,12 @@ function drawTree() {
     ctx.beginPath(); ctx.moveTo(n.x+n.w/2,n.y); ctx.lineTo(n.x+n.w/2,16); ctx.stroke(); ctx.setLineDash([]);
   });
 
+  ctx.restore();
+  // Draw pan hint if content is off-screen
+  if(treePanX<0){
+    ctx.fillStyle='rgba(88,166,255,.5)';ctx.font='9px JetBrains Mono';
+    ctx.fillText('← scroll or drag to pan',8,H-6);
+  }
   if(connMode&&connFrom){
     document.getElementById('conn-hint').style.display='block';
   } else {
@@ -706,16 +1037,41 @@ tc.addEventListener('mousedown',e=>{
         connMode=false; connFrom=null;
       } else { connMode=true; connFrom=hit; selNode=hit; }
       updateStats(); drawTree();
+    } else {
+      var ci = findConnAtPoint(mx,my);
+      if(ci >= 0){
+        conns.splice(ci,1);
+        updateStats(); drawTree();
+        var hint=document.getElementById('conn-hint');
+        if(hint){ hint.style.display='block'; hint.style.color='var(--red)'; hint.textContent='Connection deleted'; setTimeout(function(){hint.style.display='none';hint.style.color='var(--blu)';},1500); }
+      }
     }
     return;
   }
-  if(hit){ selNode=hit; dragN=hit; dragOX=mx-hit.x; dragOY=my-hit.y; connMode=false; updateStats(); drawTree(); }
-  else { selNode=null; connMode=false; connFrom=null; updateStats(); drawTree(); }
+  if(hit){
+    selNode=hit; dragN=hit; dragOX=mx-hit.x; dragOY=my-hit.y; connMode=false;
+    updateStats(); drawTree();
+  } else {
+    // Background pan
+    treeDraggingBg=true; treeDragStartX=e.clientX; treePanStart=treePanX;
+    selNode=null; connMode=false; connFrom=null; updateStats(); drawTree();
+  }
 });
 tc.addEventListener('mousemove',e=>{
   if(dragN){ const r=tc.getBoundingClientRect(); dragN.x=Math.max(0,e.clientX-r.left-dragOX); dragN.y=Math.max(18,e.clientY-r.top-dragOY); drawTree(); }
+  else if(treeDraggingBg){ treePanX=treePanStart+(e.clientX-treeDragStartX); drawTree(); }
 });
-tc.addEventListener('mouseup',()=>dragN=null);
+tc.addEventListener('mouseup',()=>{ dragN=null; treeDraggingBg=false; });
+tc.addEventListener('wheel',e=>{
+  e.preventDefault();
+  // Ctrl+wheel = zoom, plain wheel = pan horizontally
+  if(e.ctrlKey||e.metaKey){
+    treeZoom=Math.max(0.4,Math.min(2.5,treeZoom+(e.deltaY>0?-0.08:0.08)));
+  } else {
+    treePanX=Math.min(0,treePanX-(e.deltaY>0?60:-60));
+  }
+  drawTree();
+},{passive:false});
 tc.addEventListener('dblclick',e=>{
   const r=tc.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
   const hit=nodes.find(n=>mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h);
@@ -1569,23 +1925,596 @@ function downloadPy() {
 }
 
 function switchTab(tab) {
-  ['chart','bt','tpl'].forEach(t=>{
-    document.getElementById('tab-'+t).className='tab'+(t===tab?' active':'');
-    const el=document.getElementById('view-'+t);
-    el.style.display=t===tab?(t==='bt'?'flex':t==='tpl'?'block':'flex'):'none';
+  var allTabs = ['chart','builder','english','bt','tpl'];
+  allTabs.forEach(function(t){
+    var tabEl = document.getElementById('tab-'+t);
+    if (tabEl) tabEl.className = 'tab'+(t===tab?' active':'');
+    var viewEl = document.getElementById('view-'+t);
+    if (viewEl) {
+      var flex = (t==='bt'||t==='builder'||t==='english');
+      viewEl.style.display = t===tab ? (flex?'flex':'block') : 'none';
+    }
   });
-  if(tab==='tpl') renderTemplates();
-  if(tab==='chart') setTimeout(resizeCharts,50);
+  if (tab==='tpl')     renderTemplates();
+  if (tab==='chart')   setTimeout(resizeCharts,50);
+  if (tab==='builder') { rbRenderTable(); setTimeout(function(){ var cv=document.getElementById('rbC'); if(cv){cv.width=cv.parentElement.offsetWidth||320;} rbDrawDiagram(); },50); }
+  if (tab==='english') { peRender('entry'); peRender('exit'); }
 }
 
 function drawAll() { drawCandle(); drawRSI(); drawMACD(); drawTree(); }
 
+// ── Tree panel resize drag ────────────────────────────────────
+(function(){
+  var handle = null, startY = 0, startH = 0;
+  document.addEventListener('mousedown', function(e){
+    var h = document.getElementById('tree-resize-handle');
+    if (h && e.target === h) {
+      handle = document.getElementById('tree-sec');
+      startY = e.clientY;
+      startH = handle.offsetHeight;
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    }
+  });
+  document.addEventListener('mousemove', function(e){
+    if (!handle) return;
+    var dy = startY - e.clientY; // drag up = bigger tree
+    var newH = Math.max(180, Math.min(600, startH + dy));
+    handle.style.height = newH + 'px';
+    resizeCharts();
+  });
+  document.addEventListener('mouseup', function(){
+    if (handle) {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      handle = null;
+      resizeCharts();
+    }
+  });
+})();
+
+// ── Tree canvas pan (horizontal scroll) ──────────────────────
+var treePanX = 0, treeDraggingBg = false, treeDragStartX = 0, treePanStart = 0;
+var treeZoom = 1.0;
+
+// ── CSV Import ────────────────────────────────────────────────
+function openCSVModal() {
+  // Support file drop onto textarea
+  var ta = document.getElementById('csv-paste');
+  if (ta && !ta._dropSetup) {
+    ta._dropSetup = true;
+    ta.addEventListener('dragover', function(e){ e.preventDefault(); ta.style.borderColor='var(--grn)'; });
+    ta.addEventListener('dragleave', function(){ ta.style.borderColor=''; });
+    ta.addEventListener('drop', function(e){
+      e.preventDefault(); ta.style.borderColor='';
+      var file = e.dataTransfer.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){ ta.value = ev.target.result; };
+      reader.readAsText(file);
+    });
+  }
+  openModal('csv-modal');
+}
+
+function importCSV() {
+  var raw    = document.getElementById('csv-paste').value.trim();
+  var ticker = (document.getElementById('csv-ticker').value||'').trim().toUpperCase() || 'CUSTOM';
+  var status = document.getElementById('csv-status');
+
+  if (!raw) { status.textContent = 'Paste CSV data first.'; status.style.color='var(--red)'; return; }
+
+  var lines = raw.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l; });
+  if (lines.length < 2) { status.textContent = 'Not enough rows.'; status.style.color='var(--red)'; return; }
+
+  // Detect header
+  var startRow = 0;
+  var hdr = lines[0].toLowerCase();
+  if (hdr.indexOf('date') >= 0 || hdr.indexOf('time') >= 0 || hdr.indexOf('open') >= 0) startRow = 1;
+
+  // Detect delimiter
+  var delim = lines[0].indexOf('\t') >= 0 ? '\t' : ',';
+
+  var bars = [];
+  var errors = 0;
+  for (var i = startRow; i < lines.length; i++) {
+    var cols = lines[i].split(delim);
+    if (cols.length < 5) continue;
+    // Try to parse datetime / time from col 0
+    var dtStr = cols[0].replace(/"/g,'').trim();
+    var timeStr = '';
+    // Extract time portion HH:MM or HH:MM:SS
+    var tmMatch = dtStr.match(/(\d{1,2}):(\d{2})/);
+    if (tmMatch) {
+      timeStr = String(parseInt(tmMatch[1])).padStart(2,'0') + ':' + tmMatch[2];
+    } else {
+      // Date only (daily data) — use index as time placeholder
+      var fakeHr = 9 + Math.floor((i-startRow)/60);
+      var fakeMn = (i-startRow) % 60;
+      if (fakeHr > 15) { errors++; continue; }
+      timeStr = String(fakeHr).padStart(2,'0') + ':' + String(fakeMn).padStart(2,'0');
+    }
+    var o = parseFloat(cols[1]), h = parseFloat(cols[2]);
+    var l = parseFloat(cols[3]), cv = parseFloat(cols[4]);
+    if (isNaN(o)||isNaN(h)||isNaN(l)||isNaN(cv)) { errors++; continue; }
+    bars.push({ t:timeStr, o:+o.toFixed(2), h:+h.toFixed(2), l:+l.toFixed(2), c:+cv.toFixed(2) });
+  }
+
+  if (bars.length < 5) {
+    status.textContent = 'Only '+bars.length+' valid bars parsed ('+errors+' errors). Check CSV format.';
+    status.style.color = 'var(--red)'; return;
+  }
+
+  OHLCV = bars;
+  calcAllIndicators();
+  viewStart = 0;
+  viewLen   = Math.min(120, OHLCV.length);
+  CFG.symbol = ticker;
+  document.getElementById('ticker-input').value = ticker;
+  closeModal('csv-modal');
+  drawAll();
+  updateInds(Math.min(100, OHLCV.length-1));
+  showToast(ticker + ': ' + bars.length + ' bars imported from CSV  ✓', 'var(--grn)');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// RULE BUILDER (Option 2+5 Hybrid)
+// ══════════════════════════════════════════════════════════════
+var rbRules = [];  // [{type, ind, cond, threshold, action, shares, stage_name, wait_for, description}]
+
+var RB_INDS  = ['EMA12xEMA26','MACD','RSI','MA50','MA200','EMA50','MA20','Price','EMA12','EMA26'];
+var RB_CONDS = ['cross_up','cross_down','greater_than','less_than','above_ma','below_ma','at_ma'];
+var RB_ACTS  = ['BUY_LONG','SELL_LONG','SHORT','COVER_SHORT','SELL_AND_SHORT','COVER_AND_BUY'];
+var RB_WAITS = ['MA50','MA200','EMA50','MACD_cross','RSI_cross','Original_signal'];
+
+var TYPE_STYLE = {
+  entry:     {col:'var(--grn)',  bg:'#001a0e', label:'ENTRY'},
+  condition: {col:'var(--blu)',  bg:'#001428', label:'COND'},
+  action:    {col:'var(--red)',  bg:'#1a0008', label:'ACTION'},
+  stage:     {col:'var(--ylw)', bg:'#1a1000', label:'STAGE'},
+  exit:      {col:'var(--pur)', bg:'#100018', label:'EXIT'},
+};
+
+function rbMakeSelect(id, opts, sel, onch) {
+  var html = '<select class="fs" id="'+id+'" onchange="'+onch+'" style="font-size:10px;padding:4px 6px">';
+  opts.forEach(function(o){
+    var val = typeof o === 'object' ? o.v : o;
+    var lbl = typeof o === 'object' ? o.l : (condLabels[o]||indLabels[o]||o);
+    html += '<option value="'+val+'"'+(val===sel?' selected':'')+'>'+lbl+'</option>';
+  });
+  html += '</select>';
+  return html;
+}
+
+function rbRenderTable() {
+  var tbody = document.getElementById('rb-tbody');
+  var empty = document.getElementById('rb-empty');
+  if (!tbody) return;
+  if (rbRules.length === 0) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    rbDrawDiagram();
+    rbUpdatePreviewAll();
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  tbody.innerHTML = rbRules.map(function(r, i){
+    var ts = TYPE_STYLE[r.type] || TYPE_STYLE.entry;
+    var typeBadge = '<span style="display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;border:1px solid '+ts.col+';color:'+ts.col+';background:'+ts.bg+';letter-spacing:.5px">'+ts.label+'</span>';
+
+    var indCell = '', condCell = '', valCell = '', meaningCell = '';
+
+    if (r.type === 'action' || r.type === 'exit') {
+      indCell  = rbMakeSelect('rb-act-'+i, RB_ACTS, r.action||'BUY_LONG', 'rbRowChange('+i+')');
+      condCell = '<span style="color:var(--tx3);font-size:10px">shares:</span>';
+      valCell  = '<input class="fi" id="rb-sh-'+i+'" value="'+(r.shares||50)+'" type="number" style="width:55px;font-size:10px;padding:4px 6px" oninput="rbRowChange('+i+')">';
+      meaningCell = '<span style="color:var(--tx2);font-size:10px">'+(r.action||'BUY_LONG').replace(/_/g,' ')+' '+( r.shares||50)+' shares</span>';
+    } else if (r.type === 'stage') {
+      indCell  = '<input class="fi" id="rb-sn-'+i+'" value="'+(r.stage_name||'holding')+'" placeholder="stage name" style="width:110px;font-size:10px;padding:4px 6px" oninput="rbRowChange('+i+')">';
+      condCell = '<span style="color:var(--tx3);font-size:10px">wait for:</span>';
+      valCell  = rbMakeSelect('rb-wf-'+i, RB_WAITS, r.wait_for||'MA50', 'rbRowChange('+i+')');
+      meaningCell = '<span style="color:var(--tx2);font-size:10px">Hold in stage "'+( r.stage_name||'holding')+'" until '+( r.wait_for||'MA50')+'</span>';
+    } else {
+      // entry / condition
+      indCell  = rbMakeSelect('rb-ind-'+i, RB_INDS,  r.ind||'MACD',     'rbRowChange('+i+')');
+      condCell = rbMakeSelect('rb-cnd-'+i, RB_CONDS, r.cond||'cross_up', 'rbRowChange('+i+')');
+      var needsVal = !!condNeedsValue[r.cond];
+      var isMA = !!indIsMA[r.ind];
+      var disabled = (!needsVal && isMA) ? ' disabled style="opacity:.4"' : '';
+      valCell  = '<input class="fi" id="rb-th-'+i+'" value="'+(r.threshold||'')+'"'+disabled+' placeholder="'+(r.ind==='RSI'?'e.g.40':needsVal?'value':'n/a')+'" style="width:65px;font-size:10px;padding:4px 6px" oninput="rbRowChange('+i+')">';
+      meaningCell = '<span style="color:var(--grn);font-size:10px" id="rb-hint-'+i+'">'+getCondHint(r.ind||'MACD', r.cond||'cross_up', r.threshold||'')+'</span>';
+    }
+
+    var rowBg = i%2===0 ? 'var(--bg)' : 'var(--bg2)';
+    return '<tr style="background:'+rowBg+';border-bottom:1px solid #0d151f" id="rb-row-'+i+'">'
+      +'<td style="padding:7px 8px">'+typeBadge+'</td>'
+      +'<td style="padding:7px 8px">'+indCell+'</td>'
+      +'<td style="padding:7px 8px">'+condCell+'</td>'
+      +'<td style="padding:7px 8px">'+valCell+'</td>'
+      +'<td style="padding:7px 8px;max-width:260px">'+meaningCell+'</td>'
+      +'<td style="padding:7px 8px;text-align:center">'
+      +'<button onclick="rbDeleteRow('+i+')" style="background:#1a0008;border:1px solid var(--red);color:var(--red);border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1">×</button>'
+      +'</td>'
+      +'</tr>';
+  }).join('');
+
+  rbDrawDiagram();
+  rbUpdatePreviewAll();
+}
+
+function rbRowChange(i) {
+  var r = rbRules[i];
+  if (!r) return;
+  if (r.type === 'action' || r.type === 'exit') {
+    var a = document.getElementById('rb-act-'+i); if(a) r.action = a.value;
+    var s = document.getElementById('rb-sh-'+i);  if(s) r.shares = parseInt(s.value)||50;
+  } else if (r.type === 'stage') {
+    var sn = document.getElementById('rb-sn-'+i); if(sn) r.stage_name = sn.value;
+    var wf = document.getElementById('rb-wf-'+i); if(wf) r.wait_for   = wf.value;
+  } else {
+    var ind  = document.getElementById('rb-ind-'+i); if(ind)  r.ind  = ind.value;
+    var cnd  = document.getElementById('rb-cnd-'+i); if(cnd)  r.cond = cnd.value;
+    var th   = document.getElementById('rb-th-'+i);  if(th)   r.threshold = th.value;
+    // Update hint
+    var hint = document.getElementById('rb-hint-'+i);
+    if (hint) hint.textContent = getCondHint(r.ind, r.cond, r.threshold);
+    // Grey value field if not needed
+    if (th) {
+      var nv = !!condNeedsValue[r.cond], im = !!indIsMA[r.ind];
+      th.disabled = !nv && im; th.style.opacity = (!nv&&im)?'0.4':'1';
+      th.placeholder = r.ind==='RSI'?'e.g.40':nv?'value':'n/a';
+    }
+  }
+  rbDrawDiagram();
+  rbUpdatePreviewAll();
+}
+
+function rbAddRow(type) {
+  var defaults = {
+    entry:     {type:'entry',     ind:'EMA12xEMA26', cond:'cross_up',    threshold:'', description:''},
+    condition: {type:'condition', ind:'RSI',         cond:'less_than',   threshold:'40', description:''},
+    action:    {type:'action',    action:'BUY_LONG', shares:50,          description:''},
+    stage:     {type:'stage',     stage_name:'holding', wait_for:'MA50', description:''},
+    exit:      {type:'exit',      action:'SELL_LONG', shares:50,         description:''},
+  };
+  rbRules.push(Object.assign({}, defaults[type]||defaults.entry));
+  rbRenderTable();
+  switchTab('builder');
+}
+
+function rbDeleteRow(i) {
+  rbRules.splice(i,1);
+  rbRenderTable();
+}
+
+function rbClearAll() {
+  if (rbRules.length && !confirm('Clear all rules?')) return;
+  rbRules = [];
+  rbRenderTable();
+}
+
+// Sync rules → canvas nodes
+function rbSyncToTree() {
+  nodes = []; conns = []; selNode = null;
+  var x = 60, y = 70, prevId = null;
+  var rowH = 0;
+  rbRules.forEach(function(r, i){
+    var props = Object.assign({description: r.description||''}, r);
+    if ((r.type==='entry'||r.type==='condition') && r.ind) {
+      props.conditions = [{ind:r.ind, cond:r.cond, threshold:r.threshold||'', logic:'AND'}];
+    }
+    var n = addNodeUI(r.type, x, y, props);
+    if (prevId) conns.push([prevId, n.id]);
+    prevId = n.id;
+    x += 160;
+    if (x > 700) { x = 60; y += 100; }
+  });
+  updateStats(); drawTree();
+  switchTab('chart');
+}
+
+// Draw auto-diagram in sidebar canvas
+function rbDrawDiagram() {
+  var cv = document.getElementById('rbC');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var W = cv.width||320, H = cv.height||500;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0e1318'; ctx.fillRect(0,0,W,H);
+  if (rbRules.length===0){
+    ctx.fillStyle='#2a3a50'; ctx.font='10px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText('Add rules to see diagram',W/2,H/2); ctx.textAlign='left'; return;
+  }
+  var nodeW=220, nodeH=44, startX=50, startY=30, gap=18;
+  var totalH = rbRules.length*(nodeH+gap)+40;
+  cv.height = Math.max(500, totalH);
+  H = cv.height;
+  ctx.fillStyle='#0e1318'; ctx.fillRect(0,0,W,H);
+
+  rbRules.forEach(function(r, i){
+    var ts = TYPE_STYLE[r.type]||TYPE_STYLE.entry;
+    var x=startX, y=startY+i*(nodeH+gap);
+    // Connection line from previous
+    if (i>0){
+      var py = startY+(i-1)*(nodeH+gap)+nodeH;
+      ctx.strokeStyle=ts.col+'60'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(x+nodeW/2, py); ctx.lineTo(x+nodeW/2, y); ctx.stroke();
+      ctx.setLineDash([]);
+      // Arrow
+      ctx.fillStyle=ts.col+'80'; ctx.beginPath();
+      ctx.moveTo(x+nodeW/2, y); ctx.lineTo(x+nodeW/2-5,y-8); ctx.lineTo(x+nodeW/2+5,y-8);
+      ctx.closePath(); ctx.fill();
+    }
+    // Node box
+    ctx.fillStyle=ts.bg; ctx.strokeStyle=ts.col; ctx.lineWidth=1.5;
+    var r2=6;
+    ctx.beginPath(); ctx.moveTo(x+r2,y); ctx.arcTo(x+nodeW,y,x+nodeW,y+nodeH,r2);
+    ctx.arcTo(x+nodeW,y+nodeH,x,y+nodeH,r2); ctx.arcTo(x,y+nodeH,x,y,r2);
+    ctx.arcTo(x,y,x+nodeW,y,r2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Type badge
+    ctx.fillStyle=ts.col; ctx.font='bold 8px JetBrains Mono';
+    ctx.fillText(ts.label, x+8, y+13);
+    // Description
+    ctx.fillStyle='#a0b8d0'; ctx.font='9px JetBrains Mono';
+    var desc = '';
+    if (r.type==='action'||r.type==='exit') desc=(r.action||'').replace(/_/g,' ')+' '+(r.shares||50)+'sh';
+    else if (r.type==='stage') desc='Stage: '+(r.stage_name||'holding')+' → '+(r.wait_for||'MA50');
+    else desc=(indLabels[r.ind]||r.ind||'')+' '+(r.cond||'')+' '+(r.threshold||'');
+    ctx.fillText(desc.substring(0,30), x+8, y+28);
+    // Hint line
+    ctx.fillStyle=ts.col+'80'; ctx.font='8px JetBrains Mono';
+    if (r.type!=='action'&&r.type!=='exit'&&r.type!=='stage'){
+      var h=getCondHint(r.ind||'',r.cond||'',r.threshold||'');
+      ctx.fillText(h.substring(0,34), x+8, y+40);
+    }
+  });
+}
+
+function rbUpdatePreviewAll() {
+  // Also update plain english preview if visible
+  peUpdatePreview();
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// PLAIN ENGLISH BUILDER (Option 3)
+// ══════════════════════════════════════════════════════════════
+var peEntryRows = [];
+var peExitRows  = [];
+
+var PE_SUBJECTS = [
+  {v:'EMA12xEMA26', l:'EMA12'},
+  {v:'RSI',    l:'RSI(14)'},
+  {v:'Price',  l:'Price'},
+  {v:'MA50',   l:'MA50'},
+  {v:'MA200',  l:'MA200'},
+  {v:'EMA50',  l:'EMA50'},
+  {v:'MACD',   l:'MACD line'},
+];
+
+var PE_VERBS = {
+  'EMA12xEMA26': [{v:'cross_up',   l:'crosses ABOVE EMA26'},{v:'cross_down', l:'crosses BELOW EMA26'}],
+  'RSI':  [{v:'less_than',l:'drops below'},{v:'greater_than',l:'rises above'}],
+  'Price':[{v:'less_than',l:'falls below'},{v:'greater_than',l:'rises above'},{v:'at_ma',l:'touches'}],
+  'MA50': [{v:'above_ma', l:'is ABOVE price (price below MA50)'},{v:'below_ma',l:'is BELOW price (price above MA50)'},{v:'at_ma',l:'price touches MA50'}],
+  'MA200':[{v:'above_ma', l:'is ABOVE price (price below MA200)'},{v:'below_ma',l:'is BELOW price (price above MA200)'},{v:'at_ma',l:'price touches MA200'}],
+  'EMA50':[{v:'above_ma', l:'is ABOVE price'},{v:'below_ma',l:'is BELOW price'}],
+  'MACD': [{v:'greater_than',l:'is above'},{v:'less_than',l:'is below'},{v:'cross_up',l:'crosses up (bullish)'},{v:'cross_down',l:'crosses down (bearish)'}],
+};
+
+var PE_OBJECTS = {
+  'EMA12xEMA26+cross_up':   {type:'none', placeholder:''},
+  'EMA12xEMA26+cross_down': {type:'none', placeholder:''},
+  'RSI+less_than':    {type:'number', placeholder:'e.g. 40', suffix:''},
+  'RSI+greater_than': {type:'number', placeholder:'e.g. 60', suffix:''},
+  'Price+less_than':  {type:'number', placeholder:'e.g. 875', prefix:'$'},
+  'Price+greater_than':{type:'number',placeholder:'e.g. 875', prefix:'$'},
+  'Price+at_ma':      {type:'ma_select'},
+  'MACD+greater_than':{type:'number', placeholder:'e.g. 0', suffix:''},
+  'MACD+less_than':   {type:'number', placeholder:'e.g. 0', suffix:''},
+};
+
+function peGetVerbs(subj) { return PE_VERBS[subj]||[{v:'greater_than',l:'is above'}]; }
+
+function peBuildRow(section, i, row) {
+  var verbs = peGetVerbs(row.subj||'RSI');
+  var verb   = row.verb || (verbs[0]&&verbs[0].v) || 'less_than';
+  var objKey = (row.subj||'RSI')+'+'+verb;
+  var objDef = PE_OBJECTS[objKey]||{type:'number',placeholder:'value'};
+
+  var subjOpts = PE_SUBJECTS.map(function(s){
+    return '<option value="'+s.v+'"'+(s.v===row.subj?' selected':'')+'>'+s.l+'</option>';
+  }).join('');
+  var verbOpts = verbs.map(function(v){
+    return '<option value="'+v.v+'"'+(v.v===verb?' selected':'')+'>'+v.l+'</option>';
+  }).join('');
+
+  var objHtml = '';
+  if (objDef.type==='none') {
+    objHtml = '<span style="color:var(--tx3);font-size:11px;padding:0 8px">(no value needed)</span>';
+  } else if (objDef.type==='number') {
+    objHtml = (objDef.prefix?'<span style="color:var(--tx2);margin-right:3px">'+objDef.prefix+'</span>':'')
+      +'<input class="fi" id="pe-obj-'+section+'-'+i+'" value="'+(row.obj||'')+'" placeholder="'+objDef.placeholder+'"'
+      +' style="width:75px;font-size:12px" oninput="peRowChange(\''+section+'\','+i+')">';
+  } else if (objDef.type==='ma_select') {
+    var maOpts=['MA50','MA200','EMA50','MA20'].map(function(v){return '<option value="'+v+'"'+(v===row.obj?' selected':'')+'>'+v+'</option>';}).join('');
+    objHtml='<select class="fs" id="pe-obj-'+section+'-'+i+'" style="font-size:11px" onchange="peRowChange(\''+section+'\','+i+'\')">'+maOpts+'</select>';
+  }
+
+  var prefix = i===0 ? '<span style="color:var(--tx3);font-size:11px;width:40px;display:inline-block">When</span>'
+                      : '<span style="color:var(--ylw);font-size:11px;width:40px;display:inline-block;font-weight:700">AND</span>';
+
+  return '<div id="pe-row-'+section+'-'+i+'" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
+    + prefix
+    + '<select class="fs" id="pe-subj-'+section+'-'+i+'" style="font-size:12px;font-weight:700;width:130px" onchange="peSubjChange(\''+section+'\','+i+')">'+subjOpts+'</select>'
+    + '<select class="fs" id="pe-verb-'+section+'-'+i+'" style="font-size:12px;flex:1;min-width:160px" onchange="peRowChange(\''+section+'\','+i+')">'+verbOpts+'</select>'
+    + objHtml
+    + (i>0?'<button onclick="peDeleteRow(\''+section+'\','+i+')" style="background:#1a0008;border:1px solid var(--red);color:var(--red);border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1">×</button>':'<span style="width:24px"></span>')
+    + '</div>';
+}
+
+function peRender(section) {
+  var rows = section==='entry' ? peEntryRows : peExitRows;
+  var container = document.getElementById('pe-'+section+'-rows');
+  if (!container) return;
+  container.innerHTML = rows.map(function(r,i){ return peBuildRow(section,i,r); }).join('');
+  peUpdatePreview();
+}
+
+function peAddRow(section) {
+  var arr = section==='entry' ? peEntryRows : peExitRows;
+  arr.push({subj:'RSI', verb:'less_than', obj:'40'});
+  peRender(section);
+}
+
+function peDeleteRow(section, i) {
+  var arr = section==='entry' ? peEntryRows : peExitRows;
+  arr.splice(i,1); peRender(section);
+}
+
+function peSubjChange(section, i) {
+  var arr = section==='entry' ? peEntryRows : peExitRows;
+  var subj = document.getElementById('pe-subj-'+section+'-'+i);
+  if (!subj) return;
+  arr[i].subj = subj.value;
+  var verbs = peGetVerbs(arr[i].subj);
+  arr[i].verb = verbs[0]&&verbs[0].v||'less_than';
+  arr[i].obj  = '';
+  peRender(section);
+}
+
+function peRowChange(section, i) {
+  var arr  = section==='entry' ? peEntryRows : peExitRows;
+  var verb = document.getElementById('pe-verb-'+section+'-'+i);
+  var obj  = document.getElementById('pe-obj-'+section+'-'+i);
+  if (verb) arr[i].verb = verb.value;
+  if (obj)  arr[i].obj  = obj.value;
+  peRender(section);
+}
+
+function peRowToEnglish(r) {
+  var subj = indLabels[r.subj]||r.subj;
+  var verb = '';
+  var verbs = peGetVerbs(r.subj);
+  var vObj = verbs.find(function(v){return v.v===r.verb;});
+  if (vObj) verb=vObj.l;
+  var objKey=(r.subj||'')+'+'+( r.verb||'');
+  var objDef=PE_OBJECTS[objKey]||{};
+  var obj='';
+  if(objDef.type==='number'&&r.obj) obj=(objDef.prefix||'')+r.obj+(objDef.suffix||'');
+  else if(objDef.type==='ma_select') obj=r.obj||'MA50';
+  return subj+' '+verb+(obj?' '+obj:'');
+}
+
+function peUpdatePreview() {
+  var prev = document.getElementById('pe-preview');
+  if (!prev) return;
+  var sym    = (document.getElementById('pe-sym')&&document.getElementById('pe-sym').value)||'NVDA';
+  var shares = (document.getElementById('pe-shares')&&document.getElementById('pe-shares').value)||50;
+  var side   = (document.getElementById('pe-side')&&document.getElementById('pe-side').value)||'long';
+
+  var entryLines = peEntryRows.map(function(r,i){
+    return (i===0?'<span style="color:var(--tx3)">When</span> ':'<span style="color:var(--ylw)">AND</span>  ')
+      +'<span style="color:var(--grn)">'+peRowToEnglish(r)+'</span>';
+  });
+  var exitLines = peExitRows.map(function(r,i){
+    return (i===0?'<span style="color:var(--tx3)">When</span> ':'<span style="color:var(--red)">OR</span>   ')
+      +'<span style="color:var(--red)">'+peRowToEnglish(r)+'</span>';
+  });
+  var sideText = side==='both'?'BUY LONG or SHORT':side==='long'?'BUY LONG':'SHORT';
+  var html = entryLines.length
+    ? entryLines.join('<br>')+'<br><span style="color:var(--tx3)">→ Then</span> <span style="color:var(--grn);font-weight:700">'+sideText+' '+shares+' '+sym+' shares</span><br><br>'
+    : '<span style="color:var(--tx3)">Add entry conditions above</span><br><br>';
+  html += exitLines.length
+    ? exitLines.join('<br>')+'<br><span style="color:var(--tx3)">→ Then</span> <span style="color:var(--red);font-weight:700">CLOSE position</span>'
+    : '<span style="color:var(--tx3)">Add exit conditions above</span>';
+  prev.innerHTML = html;
+}
+
+function peSyncToTree() {
+  // Convert PE rows to rbRules then sync
+  rbRules = [];
+  var side = (document.getElementById('pe-side')&&document.getElementById('pe-side').value)||'long';
+  var shares = parseInt((document.getElementById('pe-shares')&&document.getElementById('pe-shares').value)||50);
+
+  if (peEntryRows.length>0){
+    peEntryRows.forEach(function(r,i){
+      rbRules.push({type: i===0?'entry':'condition', ind:r.subj, cond:r.verb, threshold:r.obj||'', description:peRowToEnglish(r)});
+    });
+    var act = side==='long'?'BUY_LONG':side==='short'?'SHORT':'BUY_LONG';
+    rbRules.push({type:'action', action:act, shares:shares, description:act.replace(/_/g,' ')+' '+shares+'sh'});
+  }
+  if (peExitRows.length>0){
+    peExitRows.forEach(function(r,i){
+      rbRules.push({type: i===0?'exit':'condition', ind:r.subj, cond:r.verb, threshold:r.obj||'', description:peRowToEnglish(r)});
+    });
+  }
+  rbSyncToTree();
+}
+
+function genCodeFromPE() {
+  peSyncToTree();
+  setTimeout(genCode, 100);
+}
+
+// ── Update switchTab for new tabs ─────────────────────────────
+function switchTab(tab) {
+  var allTabs = ['chart','builder','english','bt','tpl'];
+  allTabs.forEach(function(t){
+    var tabEl = document.getElementById('tab-'+t);
+    if (tabEl) tabEl.className = 'tab'+(t===tab?' active':'');
+    var viewEl = document.getElementById('view-'+t);
+    if (viewEl) {
+      var flex = (t==='bt'||t==='builder'||t==='english');
+      viewEl.style.display = t===tab ? (flex?'flex':'block') : 'none';
+    }
+  });
+  if (tab==='tpl')     renderTemplates();
+  if (tab==='chart')   setTimeout(resizeCharts,50);
+  if (tab==='builder') { rbRenderTable(); setTimeout(function(){ var cv=document.getElementById('rbC'); if(cv){cv.width=cv.parentElement.offsetWidth||320;} rbDrawDiagram(); },50); }
+  if (tab==='english') { peRender('entry'); peRender('exit'); }
+}
 window.addEventListener('load',()=>{
+  // Set default date to most recent weekday
+  var defDate = new Date();
+  if (defDate.getDay()===0) defDate.setDate(defDate.getDate()-2);
+  if (defDate.getDay()===6) defDate.setDate(defDate.getDate()-1);
+  var defDateStr = defDate.toISOString().slice(0,10);
+  document.getElementById('date-input').value = defDateStr;
+
   resizeCharts();
   const tpl=TEMPLATES[0]; const idMap={};
   tpl.nodes.forEach((nd,j)=>{ const n=addNodeUI(nd.type,nd.x,nd.y,nd.props); idMap[j]=n.id; });
   tpl.conns.forEach(([a,b])=>conns.push([idMap[a],idMap[b]]));
-  updateStats(); drawAll(); updateInds(100);
+  updateStats();
+  OHLCV = generateSimData();
+  calcAllIndicators();
+  drawAll();
+  updateInds(100);
+  showToast('Enter ticker + date and click LOAD DATA, or use ↑ CSV to import a Yahoo Finance CSV', 'var(--ylw)');
+  // Init Plain English with sample rows
+  peEntryRows = [
+    {subj:'EMA12xEMA26', verb:'cross_up',    obj:''},
+    {subj:'RSI',         verb:'less_than',   obj:'40'},
+    {subj:'MA50',        verb:'above_ma',    obj:''},
+    {subj:'MA200',       verb:'above_ma',    obj:''},
+  ];
+  peExitRows = [
+    {subj:'RSI', verb:'greater_than', obj:'60'},
+  ];
+  // Init Rule Builder with NVDA combo defaults
+  rbRules = [
+    {type:'entry',     ind:'EMA12xEMA26', cond:'cross_up',  threshold:'', description:'EMA12 crosses above EMA26'},
+    {type:'condition', ind:'RSI',         cond:'less_than', threshold:'40', description:'RSI < 40'},
+    {type:'condition', ind:'MA50',        cond:'above_ma',  threshold:'', description:'price below MA50'},
+    {type:'condition', ind:'MA200',       cond:'above_ma',  threshold:'', description:'price below MA200'},
+    {type:'action',    action:'BUY_LONG', shares:50,        description:'Buy 50 shares long'},
+    {type:'stage',     stage_name:'holding', wait_for:'MA50', description:'Hold, watch MA50'},
+    {type:'exit',      action:'SELL_AND_SHORT', shares:50,  description:'MACD+RSI+MA full exit'},
+  ];
 });
 window.addEventListener('resize',resizeCharts);
 </script>
