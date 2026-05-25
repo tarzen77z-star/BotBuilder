@@ -308,40 +308,110 @@ canvas{display:block}
       </div>
 
       <!-- PLAIN ENGLISH VIEW (Option 3) -->
-      <div id="view-english" style="display:none;flex-direction:column;height:100%;overflow-y:auto;padding:20px;gap:16px">
-        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:16px">
-          <div style="font-size:10px;color:var(--blu);letter-spacing:2px;font-weight:700;margin-bottom:12px">ENTRY — when ALL of these are true, open position</div>
-          <div id="pe-entry-rows"></div>
-          <button class="btn btn-g" onclick="peAddRow('entry')" style="margin-top:8px;font-size:10px;padding:4px 12px">+ ADD CONDITION</button>
-        </div>
-        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:16px">
-          <div style="font-size:10px;color:var(--red);letter-spacing:2px;font-weight:700;margin-bottom:12px">EXIT — when ANY of these trigger, close position</div>
-          <div id="pe-exit-rows"></div>
-          <button class="btn btn-r" onclick="peAddRow('exit')" style="margin-top:8px;font-size:10px;padding:4px 12px">+ ADD EXIT CONDITION</button>
-        </div>
-        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:16px">
-          <div style="font-size:10px;color:var(--ylw);letter-spacing:2px;font-weight:700;margin-bottom:12px">POSITION SETTINGS</div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--tx2)">
-            <span>Trade</span>
-            <select class="fs" id="pe-side" style="width:120px;font-size:11px">
-              <option value="long">LONG only</option>
-              <option value="short">SHORT only</option>
-              <option value="both">LONG + SHORT</option>
-            </select>
-            <span>with</span>
-            <input class="fi" id="pe-shares" value="50" type="number" style="width:60px;font-size:11px">
-            <span>shares on</span>
-            <input class="fi" id="pe-sym" value="NVDA" style="width:70px;font-size:11px;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+      <div id="view-english" style="display:none;flex-direction:row;height:100%;overflow:hidden">
+
+        <!-- Left: Strategy builder sections -->
+        <div style="flex:1;min-width:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
+
+          <!-- Step 1: Settings -->
+          <div style="background:var(--bg2);border:1px solid var(--bd2);border-radius:8px;overflow:hidden">
+            <div style="background:var(--bg3);padding:8px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px">
+              <span style="font-size:10px;color:var(--ylw);letter-spacing:2px;font-weight:700">① POSITION SETTINGS</span>
+            </div>
+            <div style="padding:12px 14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--tx2)">
+              <span>I want to trade</span>
+              <select class="fs" id="pe-side" style="width:130px;font-size:11px" onchange="peUpdatePreview()">
+                <option value="long">LONG only</option>
+                <option value="short">SHORT only</option>
+                <option value="both">LONG + SHORT</option>
+              </select>
+              <span>using</span>
+              <input class="fi" id="pe-shares" value="50" type="number" style="width:58px;font-size:12px;font-weight:700;text-align:center" oninput="peUpdatePreview()">
+              <span>shares of</span>
+              <input class="fi" id="pe-sym" value="NVDA" style="width:72px;font-size:12px;font-weight:700;text-transform:uppercase" oninput="this.value=this.value.toUpperCase();peUpdatePreview()">
+            </div>
+          </div>
+
+          <!-- Step 2: Entry conditions -->
+          <div style="background:var(--bg2);border:1px solid #00e88730;border-radius:8px;overflow:hidden">
+            <div style="background:#001a0e;padding:8px 14px;border-bottom:1px solid #00e88730;display:flex;align-items:center;gap:8px">
+              <span style="font-size:10px;color:var(--grn);letter-spacing:2px;font-weight:700">② ENTRY — open position when ALL of these are true</span>
+              <button class="btn btn-g" onclick="peAddRow('entry')" style="margin-left:auto;padding:5px 14px;font-size:10px;font-weight:700">+ ADD CONDITION</button>
+            </div>
+            <div style="padding:10px 14px" id="pe-entry-rows"></div>
+          </div>
+
+          <!-- Step 3: Entry action -->
+          <div style="background:var(--bg2);border:1px solid #ff475730;border-radius:8px;overflow:hidden">
+            <div style="background:#1a0008;padding:8px 14px;border-bottom:1px solid #ff475730;display:flex;align-items:center;gap:8px">
+              <span style="font-size:10px;color:var(--red);letter-spacing:2px;font-weight:700">③ ENTRY ACTION — what to do when entry fires</span>
+            </div>
+            <div style="padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--tx2)">
+              <span>→ Place a</span>
+              <select class="fs" id="pe-entry-action" style="width:160px;font-size:11px;font-weight:700" onchange="peUpdatePreview()">
+                <option value="BUY_LONG">BUY LONG (go long)</option>
+                <option value="SHORT">SHORT (go short)</option>
+                <option value="BUY_LONG_AND_SHORT">Both sides (armed)</option>
+              </select>
+              <span>order for</span>
+              <input class="fi" id="pe-entry-shares" value="50" type="number" style="width:58px;font-size:12px;font-weight:700;text-align:center" oninput="peUpdatePreview()">
+              <span>shares at market price</span>
+            </div>
+          </div>
+
+          <!-- Step 4: Stages (optional) -->
+          <div style="background:var(--bg2);border:1px solid #ffb30030;border-radius:8px;overflow:hidden">
+            <div style="background:#1a1000;padding:8px 14px;border-bottom:1px solid #ffb30030;display:flex;align-items:center;gap:8px">
+              <span style="font-size:10px;color:var(--ylw);letter-spacing:2px;font-weight:700">④ STAGES — optional hold / wait steps</span>
+              <span style="font-size:9px;color:var(--tx3)">e.g. hold until MA50, then reassess</span>
+              <button class="btn btn-y" onclick="peAddStage()" style="margin-left:auto;padding:5px 14px;font-size:10px;font-weight:700">+ ADD STAGE</button>
+            </div>
+            <div style="padding:10px 14px" id="pe-stage-rows">
+              <div style="color:var(--tx3);font-size:10px;padding:4px 0">No stages — position goes straight to exit conditions</div>
+            </div>
+          </div>
+
+          <!-- Step 5: Exit conditions -->
+          <div style="background:var(--bg2);border:1px solid #a78bfa30;border-radius:8px;overflow:hidden">
+            <div style="background:#100018;padding:8px 14px;border-bottom:1px solid #a78bfa30;display:flex;align-items:center;gap:8px">
+              <span style="font-size:10px;color:var(--pur);letter-spacing:2px;font-weight:700">⑤ EXIT CONDITIONS — close position when ANY fires</span>
+              <button class="btn btn-p" onclick="peAddRow('exit')" style="margin-left:auto;padding:5px 14px;font-size:10px;font-weight:700">+ ADD EXIT</button>
+            </div>
+            <div style="padding:10px 14px" id="pe-exit-rows"></div>
+          </div>
+
+          <!-- Step 6: Exit action -->
+          <div style="background:var(--bg2);border:1px solid #a78bfa30;border-radius:8px;overflow:hidden">
+            <div style="background:#100018;padding:8px 14px;border-bottom:1px solid #a78bfa30;display:flex;align-items:center;gap:8px">
+              <span style="font-size:10px;color:var(--pur);letter-spacing:2px;font-weight:700">⑥ EXIT ACTION — what to do when exit fires</span>
+            </div>
+            <div style="padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--tx2)">
+              <span>→</span>
+              <select class="fs" id="pe-exit-action" style="width:220px;font-size:11px;font-weight:700" onchange="peUpdatePreview()">
+                <option value="SELL_LONG">SELL (close long)</option>
+                <option value="COVER_SHORT">COVER (close short)</option>
+                <option value="SELL_AND_SHORT">SELL LONG + flip to SHORT</option>
+                <option value="COVER_AND_BUY">COVER SHORT + flip to LONG</option>
+                <option value="CLOSE_ALL">Close position</option>
+              </select>
+              <span>for</span>
+              <input class="fi" id="pe-exit-shares" value="50" type="number" style="width:58px;font-size:12px;font-weight:700;text-align:center" oninput="peUpdatePreview()">
+              <span>shares</span>
+            </div>
+          </div>
+
+          <!-- Action buttons -->
+          <div style="display:flex;gap:8px;padding-bottom:8px">
+            <button class="btn btn-o" onclick="runBacktest()" style="font-size:10px">▶ BACKTEST</button>
+            <button class="btn btn-p" onclick="genCodeFromPE()" style="font-size:10px">{ } EXPORT .PY</button>
+            <button class="btn btn-b" onclick="peSyncToTree()" style="font-size:10px">→ SYNC TO CANVAS</button>
           </div>
         </div>
-        <div style="background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:14px">
-          <div style="font-size:10px;color:var(--grn);letter-spacing:2px;font-weight:700;margin-bottom:10px">STRATEGY PREVIEW</div>
-          <div id="pe-preview" style="font-size:11px;color:var(--tx2);line-height:2;font-family:JetBrains Mono,monospace"></div>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-o" onclick="runBacktest()" style="font-size:10px">▶ BACKTEST</button>
-          <button class="btn btn-p" onclick="genCodeFromPE()" style="font-size:10px">{ } EXPORT .PY</button>
-          <button class="btn btn-b" onclick="peSyncToTree()" style="font-size:10px">→ SYNC TO CANVAS</button>
+
+        <!-- Right: Live strategy preview -->
+        <div style="width:300px;min-width:260px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--bg2);display:flex;flex-direction:column;overflow:hidden">
+          <div style="padding:10px 14px;border-bottom:1px solid var(--bd);font-size:9px;color:var(--tx3);letter-spacing:1.5px;font-weight:700">STRATEGY PREVIEW</div>
+          <div id="pe-preview" style="flex:1;overflow-y:auto;padding:14px;font-size:11px;line-height:2;font-family:JetBrains Mono,monospace;color:var(--tx2)"></div>
         </div>
       </div>
 
@@ -2320,10 +2390,11 @@ var PE_OBJECTS = {
 function peGetVerbs(subj) { return PE_VERBS[subj]||[{v:'greater_than',l:'is above'}]; }
 
 function peBuildRow(section, i, row) {
-  var verbs = peGetVerbs(row.subj||'RSI');
+  var verbs  = peGetVerbs(row.subj||'RSI');
   var verb   = row.verb || (verbs[0]&&verbs[0].v) || 'less_than';
   var objKey = (row.subj||'RSI')+'+'+verb;
   var objDef = PE_OBJECTS[objKey]||{type:'number',placeholder:'value'};
+  var isEntry = section==='entry';
 
   var subjOpts = PE_SUBJECTS.map(function(s){
     return '<option value="'+s.v+'"'+(s.v===row.subj?' selected':'')+'>'+s.l+'</option>';
@@ -2334,25 +2405,29 @@ function peBuildRow(section, i, row) {
 
   var objHtml = '';
   if (objDef.type==='none') {
-    objHtml = '<span style="color:var(--tx3);font-size:11px;padding:0 8px">(no value needed)</span>';
+    objHtml = '<span style="font-size:10px;color:var(--tx3);padding:0 6px;white-space:nowrap;font-style:italic">no value needed</span>';
   } else if (objDef.type==='number') {
-    objHtml = (objDef.prefix?'<span style="color:var(--tx2);margin-right:3px">'+objDef.prefix+'</span>':'')
-      +'<input class="fi" id="pe-obj-'+section+'-'+i+'" value="'+(row.obj||'')+'" placeholder="'+objDef.placeholder+'"'
-      +' style="width:75px;font-size:12px" oninput="peRowChange(\''+section+'\','+i+')">';
+    var pfx = objDef.prefix ? '<span style="color:var(--tx2);font-size:12px;margin-right:2px">'+objDef.prefix+'</span>' : '';
+    objHtml = pfx+'<input class="fi" id="pe-obj-'+section+'-'+i+'" value="'+(row.obj||'')+'" placeholder="'+objDef.placeholder+'" style="width:80px;font-size:13px;font-weight:700;text-align:center" oninput="peRowChange(''+section+'','+i+')">';
   } else if (objDef.type==='ma_select') {
     var maOpts=['MA50','MA200','EMA50','MA20'].map(function(v){return '<option value="'+v+'"'+(v===row.obj?' selected':'')+'>'+v+'</option>';}).join('');
-    objHtml='<select class="fs" id="pe-obj-'+section+'-'+i+'" style="font-size:11px" onchange="peRowChange(\''+section+'\','+i+'\')">'+maOpts+'</select>';
+    objHtml='<select class="fs" id="pe-obj-'+section+'-'+i+'" style="font-size:11px;width:90px" onchange="peRowChange(''+section+'','+i+'')">'+maOpts+'</select>';
   }
 
-  var prefix = i===0 ? '<span style="color:var(--tx3);font-size:11px;width:40px;display:inline-block">When</span>'
-                      : '<span style="color:var(--ylw);font-size:11px;width:40px;display:inline-block;font-weight:700">AND</span>';
+  var prefixColor = i===0 ? 'var(--tx3)' : (isEntry?'var(--ylw)':'var(--red)');
+  var prefixText  = i===0 ? 'WHEN' : 'AND';
+  var prefix = '<span style="font-size:9px;font-weight:700;letter-spacing:1px;color:'+prefixColor+';background:var(--bg3);border:1px solid var(--bd);border-radius:3px;padding:2px 7px;white-space:nowrap;min-width:44px;text-align:center;display:inline-block;flex-shrink:0">'+prefixText+'</span>';
 
-  return '<div id="pe-row-'+section+'-'+i+'" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">'
+  var delBtn = i>0
+    ? '<button onclick="peDeleteRow(''+section+'','+i+')" title="Remove" style="flex-shrink:0;background:#1a0008;border:1px solid var(--red);color:var(--red);border-radius:4px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:28px;text-align:center">×</button>'
+    : '<span style="width:28px;flex-shrink:0"></span>';
+
+  return '<div id="pe-row-'+section+'-'+i+'" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:8px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:6px">'
     + prefix
-    + '<select class="fs" id="pe-subj-'+section+'-'+i+'" style="font-size:12px;font-weight:700;width:130px" onchange="peSubjChange(\''+section+'\','+i+')">'+subjOpts+'</select>'
-    + '<select class="fs" id="pe-verb-'+section+'-'+i+'" style="font-size:12px;flex:1;min-width:160px" onchange="peRowChange(\''+section+'\','+i+')">'+verbOpts+'</select>'
+    + '<select class="fs" id="pe-subj-'+section+'-'+i+'" style="font-size:12px;font-weight:700;width:140px;flex-shrink:0" onchange="peSubjChange(''+section+'','+i+')">'+subjOpts+'</select>'
+    + '<select class="fs" id="pe-verb-'+section+'-'+i+'" style="font-size:11px;flex:1;min-width:120px" onchange="peRowChange(''+section+'','+i+')">'+verbOpts+'</select>'
     + objHtml
-    + (i>0?'<button onclick="peDeleteRow(\''+section+'\','+i+')" style="background:#1a0008;border:1px solid var(--red);color:var(--red);border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:14px;line-height:1">×</button>':'<span style="width:24px"></span>')
+    + delBtn
     + '</div>';
 }
 
@@ -2409,51 +2484,124 @@ function peRowToEnglish(r) {
   return subj+' '+verb+(obj?' '+obj:'');
 }
 
+function peAddStage() {
+  var container = document.getElementById('pe-stage-rows');
+  if (!container) return;
+  var idx = container.querySelectorAll('.pe-stage-row').length;
+  // Clear empty message
+  if (idx===0) container.innerHTML='';
+  var waits = ['MA50','MA200','EMA50','MACD_cross','RSI_cross','Original_signal'];
+  var wOpts = waits.map(function(w){ return '<option value="'+w+'">'+w+'</option>'; }).join('');
+  var row = document.createElement('div');
+  row.className='pe-stage-row';
+  row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:8px 10px;background:var(--bg3);border:1px solid var(--bd);border-radius:6px';
+  row.innerHTML = '<span style="font-size:9px;font-weight:700;color:var(--ylw);background:var(--bg2);border:1px solid var(--bd);border-radius:3px;padding:2px 7px;min-width:44px;text-align:center;flex-shrink:0">HOLD</span>'
+    + '<span style="font-size:11px;color:var(--tx2);flex-shrink:0">in stage named</span>'
+    + '<input class="fi" value="holding" style="width:100px;font-size:11px;font-weight:700" oninput="peUpdatePreview()">'
+    + '<span style="font-size:11px;color:var(--tx2);flex-shrink:0">until</span>'
+    + '<select class="fs" style="font-size:11px;flex:1" onchange="peUpdatePreview()">'+wOpts+'</select>'
+    + '<span style="font-size:11px;color:var(--tx2);flex-shrink:0">is hit</span>'
+    + '<button onclick="this.parentElement.remove();peUpdatePreview()" style="flex-shrink:0;background:#1a0008;border:1px solid var(--red);color:var(--red);border-radius:4px;width:28px;height:28px;cursor:pointer;font-size:16px;line-height:28px;text-align:center">×</button>';
+  container.appendChild(row);
+  peUpdatePreview();
+}
+
 function peUpdatePreview() {
   var prev = document.getElementById('pe-preview');
   if (!prev) return;
-  var sym    = (document.getElementById('pe-sym')&&document.getElementById('pe-sym').value)||'NVDA';
-  var shares = (document.getElementById('pe-shares')&&document.getElementById('pe-shares').value)||50;
-  var side   = (document.getElementById('pe-side')&&document.getElementById('pe-side').value)||'long';
+  var sym        = (document.getElementById('pe-sym')&&document.getElementById('pe-sym').value)||'NVDA';
+  var shares     = (document.getElementById('pe-shares')&&document.getElementById('pe-shares').value)||50;
+  var entShares  = (document.getElementById('pe-entry-shares')&&document.getElementById('pe-entry-shares').value)||shares;
+  var extShares  = (document.getElementById('pe-exit-shares')&&document.getElementById('pe-exit-shares').value)||shares;
+  var side       = (document.getElementById('pe-side')&&document.getElementById('pe-side').value)||'long';
+  var entAction  = (document.getElementById('pe-entry-action')&&document.getElementById('pe-entry-action').value)||'BUY_LONG';
+  var extAction  = (document.getElementById('pe-exit-action')&&document.getElementById('pe-exit-action').value)||'SELL_LONG';
 
-  var entryLines = peEntryRows.map(function(r,i){
-    return (i===0?'<span style="color:var(--tx3)">When</span> ':'<span style="color:var(--ylw)">AND</span>  ')
-      +'<span style="color:var(--grn)">'+peRowToEnglish(r)+'</span>';
-  });
-  var exitLines = peExitRows.map(function(r,i){
-    return (i===0?'<span style="color:var(--tx3)">When</span> ':'<span style="color:var(--red)">OR</span>   ')
-      +'<span style="color:var(--red)">'+peRowToEnglish(r)+'</span>';
-  });
-  var sideText = side==='both'?'BUY LONG or SHORT':side==='long'?'BUY LONG':'SHORT';
-  var html = entryLines.length
-    ? entryLines.join('<br>')+'<br><span style="color:var(--tx3)">→ Then</span> <span style="color:var(--grn);font-weight:700">'+sideText+' '+shares+' '+sym+' shares</span><br><br>'
-    : '<span style="color:var(--tx3)">Add entry conditions above</span><br><br>';
-  html += exitLines.length
-    ? exitLines.join('<br>')+'<br><span style="color:var(--tx3)">→ Then</span> <span style="color:var(--red);font-weight:700">CLOSE position</span>'
-    : '<span style="color:var(--tx3)">Add exit conditions above</span>';
-  prev.innerHTML = html;
+  var L = [];
+  function line(txt) { L.push(txt); }
+
+  line('<span style="color:var(--tx3);font-size:9px;letter-spacing:1px">─── SETTINGS ───</span>');
+  line('<span style="color:var(--tx2)">Symbol: <span style="color:var(--ylw);font-weight:700">'+sym+'</span>  |  Side: <span style="color:var(--ylw);font-weight:700">'+side.toUpperCase()+'</span></span>');
+  line('');
+
+  line('<span style="color:var(--tx3);font-size:9px;letter-spacing:1px">─── ENTRY ───</span>');
+  if (peEntryRows.length===0) {
+    line('<span style="color:var(--tx3);font-style:italic">No entry conditions defined</span>');
+  } else {
+    peEntryRows.forEach(function(r,i){
+      var pfx=i===0?'<span style="color:var(--tx3)">When  </span>':'<span style="color:var(--grn);font-weight:700">AND   </span>';
+      line(pfx+'<span style="color:var(--grn)">'+peRowToEnglish(r)+'</span>');
+    });
+    var actLabel = entAction.replace(/_/g,' ');
+    line('<span style="color:var(--tx3)">→ then </span><span style="color:var(--red);font-weight:700">'+actLabel+' '+entShares+' '+sym+' shares</span>');
+  }
+  line('');
+
+  // Stages
+  var stageRows = document.querySelectorAll('#pe-stage-rows .pe-stage-row');
+  if (stageRows.length>0){
+    line('<span style="color:var(--tx3);font-size:9px;letter-spacing:1px">─── STAGES ───</span>');
+    stageRows.forEach(function(row,i){
+      var inputs  = row.querySelectorAll('input');
+      var selects = row.querySelectorAll('select');
+      var stageName = inputs[0]?inputs[0].value:'holding';
+      var waitFor   = selects[0]?selects[0].value:'MA50';
+      line('<span style="color:var(--ylw)">STAGE '+(i+1)+': </span><span style="color:var(--tx2)">Hold in "'+stageName+'" until <span style="color:var(--ylw);font-weight:700">'+waitFor+'</span> is hit</span>');
+    });
+    line('');
+  }
+
+  line('<span style="color:var(--tx3);font-size:9px;letter-spacing:1px">─── EXIT ───</span>');
+  if (peExitRows.length===0) {
+    line('<span style="color:var(--tx3);font-style:italic">No exit conditions defined</span>');
+  } else {
+    peExitRows.forEach(function(r,i){
+      var pfx=i===0?'<span style="color:var(--tx3)">When  </span>':'<span style="color:var(--pur);font-weight:700">OR    </span>';
+      line(pfx+'<span style="color:var(--pur)">'+peRowToEnglish(r)+'</span>');
+    });
+    var extLabel = extAction.replace(/_/g,' ');
+    line('<span style="color:var(--tx3)">→ then </span><span style="color:var(--pur);font-weight:700">'+extLabel+' '+extShares+' shares</span>');
+  }
+
+  prev.innerHTML = L.join('<br>');
 }
 
 function peSyncToTree() {
-  // Convert PE rows to rbRules then sync
   rbRules = [];
-  var side = (document.getElementById('pe-side')&&document.getElementById('pe-side').value)||'long';
-  var shares = parseInt((document.getElementById('pe-shares')&&document.getElementById('pe-shares').value)||50);
+  var side       = (document.getElementById('pe-side')&&document.getElementById('pe-side').value)||'long';
+  var shares     = parseInt((document.getElementById('pe-shares')&&document.getElementById('pe-shares').value)||50);
+  var entShares  = parseInt((document.getElementById('pe-entry-shares')&&document.getElementById('pe-entry-shares').value)||shares);
+  var extShares  = parseInt((document.getElementById('pe-exit-shares')&&document.getElementById('pe-exit-shares').value)||shares);
+  var entAction  = (document.getElementById('pe-entry-action')&&document.getElementById('pe-entry-action').value)||'BUY_LONG';
+  var extAction  = (document.getElementById('pe-exit-action')&&document.getElementById('pe-exit-action').value)||'SELL_LONG';
 
+  // Entry conditions
+  peEntryRows.forEach(function(r,i){
+    rbRules.push({type: i===0?'entry':'condition', ind:r.subj, cond:r.verb, threshold:r.obj||'', description:peRowToEnglish(r)});
+  });
+  // Entry action
   if (peEntryRows.length>0){
-    peEntryRows.forEach(function(r,i){
-      rbRules.push({type: i===0?'entry':'condition', ind:r.subj, cond:r.verb, threshold:r.obj||'', description:peRowToEnglish(r)});
-    });
-    var act = side==='long'?'BUY_LONG':side==='short'?'SHORT':'BUY_LONG';
-    rbRules.push({type:'action', action:act, shares:shares, description:act.replace(/_/g,' ')+' '+shares+'sh'});
+    rbRules.push({type:'action', action:entAction, shares:entShares, description:entAction.replace(/_/g,' ')+' '+entShares+'sh'});
   }
-  if (peExitRows.length>0){
-    peExitRows.forEach(function(r,i){
-      rbRules.push({type: i===0?'exit':'condition', ind:r.subj, cond:r.verb, threshold:r.obj||'', description:peRowToEnglish(r)});
-    });
+  // Stages
+  var stageRows = document.querySelectorAll('#pe-stage-rows .pe-stage-row');
+  stageRows.forEach(function(row){
+    var inputs=row.querySelectorAll('input'), selects=row.querySelectorAll('select');
+    var stageName=inputs[0]?inputs[0].value:'holding';
+    var waitFor=selects[0]?selects[0].value:'MA50';
+    rbRules.push({type:'stage', stage_name:stageName, wait_for:waitFor, description:'Hold in "'+stageName+'" until '+waitFor});
+  });
+  // Exit conditions
+  peExitRows.forEach(function(r,i){
+    rbRules.push({type: i===0?'exit':'condition', ind:r.subj, cond:r.verb, threshold:r.obj||'', description:peRowToEnglish(r)});
+  });
+  // Exit action (only if separate from entry flip)
+  if (peExitRows.length>0 && extAction!=='SELL_LONG' && extAction!=='CLOSE_ALL'){
+    rbRules.push({type:'exit', action:extAction, shares:extShares, description:extAction.replace(/_/g,' ')+' '+extShares+'sh'});
   }
   rbSyncToTree();
 }
+
 
 function genCodeFromPE() {
   peSyncToTree();
@@ -2503,8 +2651,14 @@ window.addEventListener('load',()=>{
     {subj:'MA200',       verb:'above_ma',    obj:''},
   ];
   peExitRows = [
-    {subj:'RSI', verb:'greater_than', obj:'60'},
+    {subj:'MACD', verb:'cross_down', obj:''},
+    {subj:'RSI',  verb:'greater_than', obj:'60'},
   ];
+  // Sync entry/exit shares with main shares
+  setTimeout(function(){
+    var es=document.getElementById('pe-entry-shares'); if(es) es.value='50';
+    var xs=document.getElementById('pe-exit-shares');  if(xs) xs.value='50';
+  },100);
   // Init Rule Builder with NVDA combo defaults
   rbRules = [
     {type:'entry',     ind:'EMA12xEMA26', cond:'cross_up',  threshold:'', description:'EMA12 crosses above EMA26'},
